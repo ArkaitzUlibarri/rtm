@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\ApiController;
 use App\Http\Requests\FilterApiRequest;
 use App\RTM\Filter\FilterService;
-use Illuminate\Http\JsonResponse;
 
 class FilterController extends ApiController
 {
@@ -20,19 +19,12 @@ class FilterController extends ApiController
 	{
 		$input = $request->formatData()->all();
 
-		$response = $this->filterService->process($input);
+		$data = $this->filterService->process($input);
 
-		if(! is_array($response)) {
-			return new JsonResponse([
-				'code'    => 400,
-				'message' => $response
-			]);
+		if(! is_array($data)) {
+			return $this->respondBadRequest($data);
 		}
 
-		return new JsonResponse([
-			'code'    => 200,
-			'message' => 'OK',
-			'data'  => $response
-		]);
+		return $this->respond($data);
 	}
 }

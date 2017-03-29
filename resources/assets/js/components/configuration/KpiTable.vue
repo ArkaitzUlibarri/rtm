@@ -16,13 +16,12 @@
 					<th><abbr title="Second Symbol">SS</abbr></th>
 					<th><abbr title="Second Threshold">ST</abbr></th>
 					<th><abbr title="Second Aggregate Threshold">SAT</abbr></th>
-
 					<th class="custom-kpi-table-action-field">Actions</th>
 				</tr>
 			</thead>
 			<tbody>
 				<tr v-show="filteredRows.length === 0">
-					<td class="text-centre" colspan="15">No Results</td>
+					<td class="text-centre" colspan="13">No Results</td>
 				</tr>
 				
 				<tr v-show="filteredRows.length !== 0"
@@ -34,8 +33,8 @@
 					<td>{{ row.vendor == null ? '-' : row.vendor }}</td>
 					<td>{{ row.tech == null ? '-' : row.tech }}</td>
 
-					<td style="font-weight:bold;color:#27ae60">{{ row.threshold_aggregate_absolute == '' ? '&#x2714;' : '' }}</td>
-					<td style="font-weight:bold;color:#27ae60">{{ row.threshold_aggregate_relative == '' ? '&#x2714;' : '' }}</td>
+					<td style="font-weight:bold;color:#27ae60">{{ row.threshold_aggregate_absolute == null ? '' : '&#x2714;' }}</td>
+					<td style="font-weight:bold;color:#27ae60">{{ row.threshold_aggregate_relative == null ? '' : '&#x2714;' }}</td>
 
 					<td>{{ isPartial(row.type, row.symbol_red) }}</td>
 					<td>{{ isPartial(row.type, row.threshold_red) }}</td>

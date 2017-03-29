@@ -3,17 +3,19 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Response;
+use Illuminate\Http\Response;
 
 abstract class ApiController extends Controller
 {
-	protected $statusCode = 200;
+
+	protected $statusCode = Response::HTTP_OK;
+
 
 	public function getStatusCode()
 	{
 		return $this->statusCode;
 	}
+
 
 	public function setStatusCode($statusCode)
 	{
@@ -21,38 +23,93 @@ abstract class ApiController extends Controller
 		return $this;
 	}
 
-	public function respondNotFound($message = 'Not Found!')
+
+	/**
+	 * 200. Success!
+	 * 
+	 * @param  $data
+	 * @return json
+	 */
+	public function respond($data = '')
 	{
-		return $this->setStatusCode(404)->respondWithError($message);
+		return response()->json($data, $this->getStatusCode());
 	}
 
-	public function respondInternalError($message = 'Internal Error!')
+
+	/**
+	 * 400. The request was invalid or cannot be otherwise served.
+	 * An accompanying error message will explain further. Requests
+	 * without authentication are considered invalid and will yield
+	 * this response.
+	 * 
+	 * @param  $data
+	 * @return json
+	 */
+	public function respondBadRequest($data = '')
 	{
-		return $this->setStatusCode(500)->respondWithError($message);
+		return $this->setStatusCode(Response::HTTP_BAD_REQUEST)->respond($data);
 	}
 
-	public function respond($data, $headers = [])
-	{
-		//return Response::json($data, $this->getStatusCode(), $headers);
-		return new JsonResponse([
-			'code'    => $this->getStatusCode(),
-			'message' => 'OK',
-			'data'  => $data
-		]);
 
+	/**
+	 * 401. Missing or incorrect authentication credentials.
+	 * 
+	 * @param  $data
+	 * @return json
+	 */
+	public function respondUnauthorized($data = '')
+	{
+		return $this->setStatusCode(Response::HTTP_UNAUTHORIZED)->respond($data);
 	}
 
-	public function respondWithError($message = 'Not Found!')
+
+	/**
+	 * 403.	The request is understood, but it has been refused or access
+	 * is not allowed. An accompanying error message will explain why.
+	 * 
+	 * @param  $data
+	 * @return json
+	 */
+	public function respondForbidden($data = '')
 	{
-		return new JsonResponse([
-			'code'    => $this->getStatusCode(),
-			'message' => $message
-		]);
-				/*
-		return $this->respond([
-			'code' => $this->getStatusCode(),
-			'message' => $message
-		]);
-		*/
+		return $this->setStatusCode(Response::HTTP_FORBIDDEN)->respond($data);
+	}
+
+
+	/**
+	 * 404. The URI requested is invalid or the resource requested, such
+	 * as a user, does not exists. Also returned when the requested format
+	 * is not supported by the requested method.
+	 * 
+	 * @param  $data
+	 * @return json]
+	 */
+	public function respondNotFound($data = '')
+	{
+		return $this->setStatusCode(Response::HTTP_NOT_FOUND)->respond($data);
+	}
+
+
+	/**
+	 * 406. Returned by the Search API when an invalid format is specified in the request.
+	 * 
+	 * @param  $data
+	 * @return json]
+	 */
+	public function respondNotAcceptable($data = '')
+	{
+		return $this->setStatusCode(Response::HTTP_NOT_ACCEPTABLE)->respond($data);
+	}
+
+
+	/**
+	 * 500. Something is broken.
+	 * 
+	 * @param  $data
+	 * @return json
+	 */
+	public function respondInternalError($data = '')
+	{
+		return $this->setStatusCode(Response::HTTP_INTERNAL_SERVER_ERROR)->respond($data);
 	}
 }

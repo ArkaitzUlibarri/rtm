@@ -28,7 +28,8 @@ Route::get('filter-kpis', 'Api\FilterController@index');
 Route::get('kpi-dependencies', 'Api\KpiController@dependencies');
 Route::get('partials', 'Api\KpiController@partials');
 Route::get('kpi', 'Api\KpiController@index');
-Route::put('kpi/{id}', 'Api\KpiController@update');
+Route::post('kpi', 'Api\KpiController@store');
+Route::patch('kpi/{id}', 'Api\KpiController@update');
 Route::delete('kpi/{id}', 'Api\KpiController@destroy');
 
 Route::get('counter', 'Api\CounterController@index');

@@ -133,7 +133,13 @@ class KpiRepository
 		return $data->where($field, null);
 	}
 
-
+	/**
+	 * Filtro los parciales por vendors y tecnologias.
+	 * 
+	 * @param  array  $vendors
+	 * @param  array  $technologies
+	 * @return array
+	 */
 	private function partials(array $vendors, array $technologies)
 	{
 		return DB::table('kpis')
@@ -142,5 +148,31 @@ class KpiRepository
 			->whereIn('tech', $technologies)
 			->select(DB::raw("concat('p', id) as name"), 'equation', 'tech', 'vendor')
 			->get()->toArray();
+	}
+
+
+	/**
+	 * Compruebo si existe un kpi en funcion de su tipo, vendor, tecnologia y nombre.
+	 * 
+	 * @param  $type
+	 * @param  $name
+	 * @param  $vendor
+	 * @param  $tech
+ 	 * @param  $id
+	 * @return bool
+	 */
+	public function exists($type, $name, $vendor = null, $tech = null, $id = null)
+	{
+		$kpi = DB::table('kpis')
+			->where('type', $type)
+			->where('name', $name)
+			->where('vendor', $vendor)
+			->where('tech', $tech);
+
+		if($id != null) {
+			$kpi = $kpi->where('id', '!=', $id);
+		}
+
+		return $kpi->first() != null ? true : false;
 	}
 }

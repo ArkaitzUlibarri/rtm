@@ -8,11 +8,11 @@ class SeederConfig
 	 * Fecha de inicio y fin para crear contadores.
 	 */
 	public static function START_DATE() {
-		return Carbon::create(2017, 3, 21, 18, 15, 0);
+		return Carbon::create(2017, 3, 27, 18, 15, 0);
 	}
 
 	public static function END_DATE() {
-		return Carbon::create(2017, 3, 22, 18, 0, 0);
+		return Carbon::create(2017, 3, 28, 18, 0, 0);
 	}
 
 	/**

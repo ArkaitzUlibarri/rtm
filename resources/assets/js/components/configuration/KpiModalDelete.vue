@@ -110,7 +110,7 @@
 						$('#delete-modal').modal('hide');
 					})
 					.catch(function (error) {
-						console.log(error);
+						toastr.error(error.response.data);
 					});
 			},
 
@@ -123,10 +123,10 @@
 						}
 					})
 					.then(function (response) {
-						vm.kpis = response.data.data;
+						vm.kpis = response.data;
 					})
 					.catch(function (error) {
-						console.log(error);
+						toastr.error(error.response.data);
 					});
 			},
 

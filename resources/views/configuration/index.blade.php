@@ -5,6 +5,11 @@
 <div class="col-xs-12">
 
 	<div class="panel panel-default">
+	<!--
+		<button class="btn btn-primary" v-on:click="ajaxTestOk">TEST OK</button>
+		<button class="btn btn-primary" v-on:click="ajaxTestData">TEST DATA</button>
+		<button class="btn btn-primary" v-on:click="ajaxTestError">TEST ERROR</button>
+-->
 
 		<div class="panel-body">
 

@@ -47,6 +47,7 @@ window.axios.interceptors.response.use(function (response) {
 		Loading.hide();
 		return response;
 	}, function (error) {
+		Loading.hide();
 		return Promise.reject(error);
 	});
 
@@ -68,7 +69,7 @@ window.axios.interceptors.response.use(function (response) {
  */
 
 window.toastr = require('toastr');
-toastr.options.timeOut = 3000;
+toastr.options.timeOut = 5000;
 toastr.options.newestOnTop = true;
 toastr.options.progressBar = false;
 toastr.options.positionClass = 'toast-bottom-right';

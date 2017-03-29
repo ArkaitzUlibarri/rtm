@@ -73,4 +73,34 @@ class Counter
 
 		return $equation;
 	}
+
+
+	/**
+	 * Valido una equacion.
+	 * 
+	 * @param  $equation	c1+c2+c3*3
+	 * @param  $vendor
+	 * @param  $tech
+	 * @return $equation	Validation OK  -> c1+c2+c3*3
+	 *                      Validation NOK -> false
+	 */
+	public function validate($equation, $vendor, $tech)
+	{
+		// Elimino los contadores
+		if($vendor != null && $tech != null) {
+			foreach ($this->databaseToHuman[$vendor][$tech] as $key => $value) {
+				$equation = preg_replace("/({$key})\b/", '', $equation);
+			}
+		}
+
+		// Elimino los parciales
+		$equation = preg_replace ("/([p]\d+)/", '', $equation);
+
+		// Elimino operaciones y parentesis
+		if(preg_replace("/[()0123456789+\-\*\/]/", '', $equation) == '') {
+			return true;
+		}
+
+		return false;
+	}
 }

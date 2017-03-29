@@ -122,28 +122,24 @@ const app = new Vue({
 			};
 
 			let url = 'api/filter-kpis' + '?' + this.getAllQueryParams();
-			console.log('http://rtm.app:8000/' + url);
+			//console.log('http://rtm.app:8000/' + url);
 
 			axios.get(url)
 				.then(function (response) {
-					if ('data' in response.data) {
-						vm.data = response.data.data.data;
-						vm.headers = vm.setHeaders(vm.data[0]);
-						vm.equations = response.data.data.kpis;
-						vm.updateChartOptions();
-					} 
-					else {
-						toastr.warning(response.data.message);
-
-						if ('errors' in response.data) {
-							for(let key in response.data.errors) {
-								toastr.error(response.data.errors[key]);
-							}
-						}
-					}
+					vm.data = response.data.data;
+					vm.headers = vm.setHeaders(vm.data[0]);
+					vm.equations = response.data.kpis;
+					vm.updateChartOptions();
 				})
 				.catch(function (error) {
-					//toastr.error(error.response.data.data, error.response.data.message);
+					if(Array.isArray(error.response.data)) {
+						error.response.data.forEach( (error) => {
+							toastr.error(error);
+						})
+					}
+					else {
+						toastr.error(error.response.data);
+					}
 				});
 		},
 
@@ -242,6 +238,13 @@ const app = new Vue({
 
 			// Completo el listado de items disponibles.
 			for (let key in this.data) {
+
+				// En el caso de agregado en nodo no tenemos el campo item.
+				if(! ('item' in this.data[key])) {
+					this.chart.items.push('Aggregate');
+					break;
+				};
+
 				if(	this.chart.items.indexOf(this.data[key].item) == -1 ) {
 					this.chart.items.push(this.data[key].item);
 				}
@@ -284,9 +287,10 @@ const app = new Vue({
 			// Recorro las lineas de datos resultantes del filtro
 			for (let key in this.data) {
 				let entry = this.data[key];
+				let itemName = ! ('item' in entry) ? 'Aggregate' : entry.item ;
 
 				// Si el elemento actual no esta en el array de posiciones lo descartamos
-				if(! (entry.item in idxFields)) continue;
+				if(! (itemName in idxFields)) continue;
 
 				// Doy formato al periodo temporal
 				let dateTime = this.shortDateTime(entry.date, entry.time);
@@ -299,13 +303,13 @@ const app = new Vue({
 					if(! (dateTime in arrayTemp[kpi])) {
 						let array = new Array(countFields).fill(null);
 						array[idxFields['Time']] = dateTime;
-						array[idxFields[entry.item]] = entry[kpi];
+						array[idxFields[itemName]] = entry[kpi];
 						arrayTemp[kpi][dateTime] = array;
 						continue;
 					}
 
 					// Completamos el valor del kpi para el item actual si ya existia el registro
-					arrayTemp[kpi][dateTime][idxFields[entry.item]] = entry[kpi];
+					arrayTemp[kpi][dateTime][idxFields[itemName]] = entry[kpi];
 				}			
 			}
 
@@ -319,7 +323,6 @@ const app = new Vue({
 					);
 				}
 			}
-
 		},
 
 		/**

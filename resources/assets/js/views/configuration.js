@@ -54,8 +54,8 @@ const app = new Vue({
 			axios.get('api/kpi', { params: { type: vm.filter.type }}),
 		])
 		.then(axios.spread(function (counter, kpi) {
-			vm.availableCounters = counter.data.data;
-			vm.kpis = kpi.data.data;
+			//vm.availableCounters = counter.data;
+			vm.kpis = kpi.data;
 		}));
 
 	},
@@ -76,7 +76,7 @@ const app = new Vue({
 				console.log("Campos no cargados");
 			}
 
-			Event.$emit('InitializeKpiForm', 'update', row, this.partials);
+			Event.$emit('InitializeKpiForm', 'edit', row, this.partials);
 		});
 
 		/**
@@ -105,7 +105,7 @@ const app = new Vue({
 		 */
 		showCreateModal() {
 			if(this.availableCounters == []) {
-				console.log("Campos no cargados");
+				toastr.error('Campos no cargados');
 			}
 
 			Event.$emit(
@@ -131,10 +131,10 @@ const app = new Vue({
 					}
 				})
 				.then(function (response) {
-					vm.kpis = response.data.data;
+					vm.kpis = response.data;
 				})
 				.catch(function (error) {
-					console.log(error);
+					toastr.error(error.response.data);
 				});
 		},
 	},

@@ -19,10 +19,6 @@ Auth::routes();
 
 Route::get('/home', 'MainController@index');
 
-Route::get('/test', function() {
-	return view('test');
-});
-
 Route::resource('configuration', 'ConfigurationController', ['only' => [
 	'index'
 ]]);

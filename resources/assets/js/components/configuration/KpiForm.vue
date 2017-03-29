@@ -5,7 +5,7 @@
 
 			<div class="modal-header">
 				<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-				<h4 class="modal-title">{{ action }} KPI</h4>
+				<h4 class="modal-title">{{ action=='new' ? 'New KPI' : 'Edit KPI' }}</h4>
 			</div>
 
 			<div class="modal-body">
@@ -32,7 +32,10 @@
 
 								<div class="form-group col-xs-12 col-sm-2">
 									<label>Type</label>
-									<select class="form-control input-sm" v-model="kpi.type" v-on:change="updateType">
+									<select class="form-control input-sm"
+											v-model="kpi.type"
+											v-on:change="updateType"
+											:disabled="action=='edit'">
 										<option value="std">Kpi</option>
 										<option value="tech">Dual</option>
 										<option value="vnd">Vendor</option>
@@ -42,7 +45,10 @@
 
 								<div class="form-group col-xs-12 col-sm-2" v-show="kpi.type!='tech'">
 									<label>Technology</label>
-									<select class="form-control input-sm" v-model="kpi.tech" v-on:change="updateTech">
+									<select class="form-control input-sm"
+											v-model="kpi.tech"
+											v-on:change="updateTech"
+											:disabled="action=='edit'">
 										<option value="2g">2G</option>
 										<option value="3g">3G</option>
 										<option value="4g">4G</option>
@@ -51,7 +57,10 @@
 
 								<div class="form-group col-xs-12 col-sm-2" v-show="kpi.type!='vnd'">
 									<label>Vendor</label>
-									<select class="form-control input-sm" v-model="kpi.vendor" v-on:change="fetchPartial">
+									<select class="form-control input-sm"
+											v-model="kpi.vendor"
+											v-on:change="fetchPartial"
+											:disabled="action=='edit'">
 										<option value="eri">ERI</option>
 										<option value="hua">HUA</option>
 									</select>
@@ -151,7 +160,7 @@
 									<div class="row">
 										<div class="checkbox col-sm-4 col-xs-12">
 											<label>
-												<input type="checkbox" v-model="hasRelativeTh"> Relative KPI
+												<input type="checkbox" v-model="hasRelativeTh" v-on:click="updateMonitoring('relative')"> Relative KPI
 											</label>
 										</div>
 									</div>
@@ -175,7 +184,7 @@
 												<select class="form-control input-sm"
 														v-model="kpi.threshold_aggregate_relative_n"
 														:disabled="kpi.threshold_aggregate_relative == '' ? true : false">
-													<option v-for="number in numbers" :value="number">{{ number }}</option>
+													<option v-for="number in numbers" :value="number.value">{{ number.text }}</option>
 												</select>
 											</div>
 											
@@ -196,7 +205,7 @@
 												<select class="form-control input-sm"
 														v-model="kpi.threshold_relative_n"
 														:disabled="kpi.threshold_relative == '' ? true : false">
-													<option v-for="number in numbers" :value="number">{{ number }}</option>
+													<option v-for="number in numbers" :value="number.value">{{ number.text }}</option>
 												</select>
 											</div>
 										</div>
@@ -233,7 +242,7 @@
 									<div class="row">
 										<div class="checkbox col-sm-4 col-xs-12">
 											<label>
-												<input type="checkbox" v-model="hasAbsoluteTh"> Absolute KPI
+												<input type="checkbox" v-model="hasAbsoluteTh" v-on:click="updateMonitoring('absolute')"> Absolute KPI
 											</label>
 										</div>
 									</div>
@@ -257,7 +266,7 @@
 												<select class="form-control input-sm"
 														v-model="kpi.threshold_aggregate_absolute_n"
 														:disabled="kpi.threshold_aggregate_absolute == '' ? true : false">
-													<option v-for="number in numbers" :value="number">{{ number }}</option>
+													<option v-for="number in numbers" :value="number.value">{{ number.text }}</option>
 												</select>
 											</div>
 										</div>
@@ -291,16 +300,13 @@
 				<button type="button"
 						class="btn btn-block btn-success"
 						@click.prevent="onSubmit">
-						{{ action }}
+						{{ action=='new' ? 'Add' : 'Edit' }}
 				</button>
 			</div>
 
 		</div>
 	</div>
 
-	<pre>
-	@{{ $props }}
-	</pre>
 </div>
 </template>
 
@@ -328,7 +334,15 @@ export default {
 			action: '',
 			hasRelativeTh: false,
 			hasAbsoluteTh: false,
-			numbers: [1, 2, 3, 4, 5, 6, 7, 8],
+			numbers: [
+				{value: '', text: '-'},
+				{value: '1', text: '1'},
+				{value: '2', text: '2'},
+				{value: '3', text: '3'},
+				{value: '4', text: '4'},
+				{value: '5', text: '5'},
+				{value: '6', text: '6'},
+			],
 			kpiOptions: [],
 			errors: new Errors(),
 			kpi: {
@@ -345,13 +359,13 @@ export default {
 				threshold_yellow: '',
 				threshold_aggregate_yellow: '',
 				threshold_relative: '',
-				threshold_relative_n: 4,
+				threshold_relative_n: '',
 				threshold_relative_condition: '',
 				threshold_relative_condition_kpi: '',
 				threshold_aggregate_relative: '',
-				threshold_aggregate_relative_n: 4,
+				threshold_aggregate_relative_n: '',
 				threshold_aggregate_absolute: '',
-				threshold_aggregate_absolute_n: 4
+				threshold_aggregate_absolute_n: ''
 			}
 		}
 	},
@@ -361,29 +375,36 @@ export default {
 		 * Inicializo las variables del kpi
 		 */
 		Event.$on('InitializeKpiForm', (action, properties, partials) => {
-
-			console.log(this.availableCounters);
-
 			this.action = action;
 			this.kpiOptions = partials;
 			this.hasRelativeTh = false;
 			this.hasAbsoluteTh = false;
 			this.errors.record({});
 
-			// Establezco todos los valores a ""
+			// Inicializo los valores a su valor por defecto
 			for (let key in this.kpi) {
 				this.kpi[key] = '';
-			}
-
-			if(action == 'new') {
-				this.kpi.threshold_relative_n = 4;
-				this.kpi.threshold_aggregate_relative_n = 4;
-				this.kpi.threshold_aggregate_absolute_n = 4;
 			}
 
 			// Completo los campos pasados por argumento
 			for (let key in properties) {
 				this.kpi[key] = properties[key];
+
+				if(action == 'edit') {
+					if(key == 'threshold_aggregate_relative' && this.isNumeric(properties[key])) {
+						this.hasRelativeTh = true;
+					}
+					else if(key == 'threshold_aggregate_absolute' && this.isNumeric(properties[key])) {
+						this.hasAbsoluteTh = true;
+					}
+				}
+			}
+
+			if(this.kpi.symbol_red == null) {
+				this.kpi.symbol_red = '';
+			}
+			if(this.kpi.symbol_yellow == null) {
+				this.kpi.symbol_yellow = '';
 			}
 
 			$('#kpi-form').modal('show');
@@ -399,20 +420,30 @@ export default {
 				this.validateForm()
 			);
 
-			if(this.errors.any()) {
-				return;
-			}
+			if(this.errors.any()) return;
 
 			let vm = this;
 
-			axios.put('api/kpi/' + vm.kpi.id, vm.kpi)
-				.then(function (response) {
-					$('#kpi-form').modal('hide');
-					Event.$emit('LoadKpis');
-				})
-				.catch(function (error) {
-					console.log(error);
-				});
+			if(vm.action == 'edit') {
+				axios.patch('api/kpi/' + vm.kpi.id, vm.kpi)
+					.then(function (response) {
+						$('#kpi-form').modal('hide');
+						Event.$emit('LoadKpis');
+					})
+					.catch(function (error) {
+						vm.showErrors(error.response.data);
+					});
+				return;
+			}
+
+			axios.post('api/kpi', vm.kpi)
+					.then(function (response) {
+						$('#kpi-form').modal('hide');
+						Event.$emit('LoadKpis');
+					})
+					.catch(function (error) {
+						vm.showErrors(error.response.data);
+					});
 		},
 
 
@@ -435,12 +466,13 @@ export default {
 					}
 				})
 				.then(function (response) {
-					vm.kpiOptions = response.data.data;
+					vm.kpiOptions = response.data;
 				})
 				.catch(function (error) {
-					console.log(error);
+					vm.showErrors(error.response.data);
 				});
 		},
+
 
 		/**
 		 * Valido el formulario.
@@ -449,15 +481,17 @@ export default {
 			var symbols = ['==', '!=', '<', '>', '<=', '>='];
 			var list = {};
 
+			// Valido el nombre del kpi
 			if(this.kpi.name == '' || this.kpi.name.length <= 2 || this.kpi.name.length > 50) {
 				list['name'] = 'Valid name required.';
 			}
 
+			// Valido que se ha insertado un texto, la equación se valida en el servidor.
 			if(this.kpi.equation == '') {
 				list['equation'] = 'Valid equation required.';
 			}   
 
-			// He seleccionado un simbolo para el threshold principal
+			// Threshold principal
 			if(symbols.indexOf(this.kpi.symbol_red) !== -1) {
 				if( ! this.isNumeric(this.kpi.threshold_red)) {
 					list['threshold_red'] = 'Must be a number';
@@ -467,7 +501,7 @@ export default {
 				}
 			}
 
-			// He seleccionado un simbolo para el threshold secundario
+			// Threshold secundario
 			if(symbols.indexOf(this.kpi.symbol_yellow) !== -1) {
 				if( ! this.isNumeric(this.kpi.threshold_yellow)) {
 					list['threshold_yellow'] = 'Must be a number';
@@ -477,34 +511,41 @@ export default {
 				}
 			}
 
+			// Si el kpi es relativo hago las siguiente validaciones
 			if(this.hasRelativeTh) {
 				if( ! this.isNumeric(this.kpi.threshold_relative)) {
 					list['threshold_relative'] = 'Must be a number';
 				}
 
-				if(this.kpi.tech != '4g') {
-					if( ! this.isNumeric(this.kpi.threshold_aggregate_relative)) {
-						list['threshold_aggregate_relative'] = 'Must be a number';
-					}
+				if( ! this.isNumeric(this.kpi.threshold_aggregate_relative)) {
+					list['threshold_aggregate_relative'] = 'Must be a number';
 				}
 			}
 
+			// Si el kpi es absoluto compruebo que tenga un threshold_
 			if(this.hasAbsoluteTh) {
-				if(this.kpi.tech != '4g') {
-					if( ! this.isNumeric(this.kpi.threshold_aggregate_absolute)) {
-						list['threshold_aggregate_absolute'] = 'Must be a number';
-					}
+				if( ! this.isNumeric(this.kpi.threshold_aggregate_absolute)) {
+					list['threshold_aggregate_absolute'] = 'Must be a number';
 				}
 			}
 
 			return list;
 		},
 
-		/**
-		 * Compruebo que el texto sea un numero.
-		 */
-		isNumeric: function(n) {
-			return !isNaN(parseFloat(n)) && isFinite(n);
+
+		updateMonitoring(type) {
+			if(type == 'relative' && this.hasRelativeTh == false) {
+				this.kpi.threshold_relative = '';
+				this.kpi.threshold_relative_n = '';
+				this.kpi.threshold_relative_condition = '';
+				this.kpi.threshold_relative_condition_kpi = '';
+				this.kpi.threshold_aggregate_relative = '';
+				this.kpi.threshold_aggregate_relative_n = '';
+			}
+			else if (type == 'absolute' && this.hasAbsoluteTh == false) {
+				this.kpi.threshold_aggregate_absolute = '';
+				this.kpi.threshold_aggregate_absolute_n = '';
+			}
 		},
 
 		/**
@@ -527,11 +568,11 @@ export default {
 			}
 
 			this.kpi.threshold_relative = '';
-			this.kpi.threshold_relative_n = 4;
+			this.kpi.threshold_relative_n = '';
 			this.kpi.threshold_aggregate_relative = '';
-			this.kpi.threshold_aggregate_relative_n = 4;
+			this.kpi.threshold_aggregate_relative_n = '';
 			this.kpi.threshold_aggregate_absolute = '';
-			this.kpi.threshold_aggregate_absolute_n = 4;
+			this.kpi.threshold_aggregate_absolute_n = '';
 		},
 
 		/**
@@ -542,14 +583,36 @@ export default {
 
 			if(this.kpi.tech == '4g') {
 				this.kpi.threshold_aggregate_relative = '';
-				this.kpi.threshold_aggregate_relative_n = 4;
+				this.kpi.threshold_aggregate_relative_n = '';
 				this.kpi.threshold_aggregate_absolute = '';
-				this.kpi.threshold_aggregate_absolute_n = 4;
+				this.kpi.threshold_aggregate_absolute_n = '';
 
 				this.errors.clear('threshold_aggregate_relative');
 				this.errors.clear('threshold_aggregate_absolute');
 			}
 		},
+
+		/**
+		 * Visualizo los errors devueltos de la consulta Ajax
+		 */
+		showErrors(errors) {
+			if(Array.isArray(errors)) {
+				errors.forEach( (error) => {
+					toastr.error(error);
+				})
+			}
+			else {
+				toastr.error(errors);
+			}
+		},
+		
+		/**
+		 * Compruebo que el texto sea un numero.
+		 */
+		isNumeric: function(n) {
+			return !isNaN(parseFloat(n)) && isFinite(n);
+		},
+
 	}
 }
 </script>

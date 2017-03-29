@@ -3,7 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 use Validator;
 
 abstract class ApiRequest extends FormRequest
@@ -24,11 +24,7 @@ abstract class ApiRequest extends FormRequest
 			}
 		}
 		
-		return new JsonResponse([
-			'code'    => 406,
-			'message' => 'Invalid Format!',
-			'errors'  => $errosList,
-		]);
+		return response()->json($errosList, Response::HTTP_NOT_ACCEPTABLE);
 	}
 
 	/**

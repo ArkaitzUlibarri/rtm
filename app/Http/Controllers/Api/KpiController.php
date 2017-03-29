@@ -7,7 +7,6 @@ use App\Http\Requests\KpiFormApiRequest;
 use App\RTM\Counter\Counter;
 use App\RTM\Kpi\Kpi;
 use App\RTM\Kpi\KpiRepository;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -17,6 +16,7 @@ class KpiController extends ApiController
 {
 	private $kpiRepository;
 	private $counter;
+
 
     /**
      * Creo una nueva instancia de ApiController.
@@ -31,6 +31,7 @@ class KpiController extends ApiController
 		$this->counter = $counter;
 	}
 
+
 	/**
 	 * Filtro los kpis dependientes de un parcial en concreto.
 	 * 
@@ -44,23 +45,16 @@ class KpiController extends ApiController
 		]);
 
         if ($validator->fails()) {
-			return new JsonResponse([
-				'code'    => 400,
-				'message' => 'NOK',
-				'data' => $validator->errors()->all()
-			]);
+			return $this->respondNotAcceptable($validator->errors()->all());
         }
 
         $data = $this->kpiRepository->dependenciesBy(
         	$request->get('partial')
         );
 
-		return new JsonResponse([
-			'code'    => 200,
-			'message' => 'OK',
-			'data' => $data
-		]);
+		return $this->respond($data);
 	}
+
 
 	/**
 	 * Filtro los parciales por vendor y tecnologia.
@@ -76,11 +70,7 @@ class KpiController extends ApiController
         ]);
 
         if ($validator->fails()) {
-			return new JsonResponse([
-				'code'    => 400,
-				'message' => 'NOK',
-				'data' => $validator->errors()->all()
-			]);
+			return $this->respondNotAcceptable($validator->errors()->all());
         }
 
 		$data = DB::table('kpis')
@@ -91,12 +81,9 @@ class KpiController extends ApiController
 			->select('id', 'name')
 			->get();
 
-		return new JsonResponse([
-			'code'    => 200,
-			'message' => 'OK',
-			'data' => $data
-		]);
+		return $this->respond($data);
 	}
+
 
 	/**
 	 * Filtro los kpis.
@@ -110,11 +97,7 @@ class KpiController extends ApiController
 		]);
 
         if ($validator->fails()) {
-			return new JsonResponse([
-				'code'    => 400,
-				'message' => 'NOK',
-				'data' => $validator->errors()->all()
-			]);
+        	return $this->respondNotAcceptable($validator->errors()->all());
         }
 
 		$data = DB::table('kpis')
@@ -132,71 +115,67 @@ class KpiController extends ApiController
 			);
 		}
 
-		return new JsonResponse([
-			'code'    => 400,
-			'message' => 'OK',
-			'data' => $data
-		]);
+		return $this->respond($data);
 	}
 
 
+	/**
+	 * Actualizo un kpi o parcial.
+	 * 
+	 * @param  KpiFormApiRequest $request
+	 * @param  $id
+	 * @return json
+	 */
 	public function update(KpiFormApiRequest $request, $id)
 	{
 		$kpi = Kpi::find($id);
 
 		if($kpi == null) {
-			return new JsonResponse([
-				'code'    => 400,
-				'message' => 'Not Found'
-			]);
+			return $this->respondNotFound();
 		}
 
-		$kpi->update($request->all());
-
-		$kpi->equation = $this->counter->toDatabase(
-			$request->get('equation'),
-			$request->get('vendor'),
-			$request->get('tech')
+		$kpi->update(
+			$request->formatData()->all()
 		);
 
-		$kpi->save();
-
-		return new JsonResponse([
-			'code'    => 200,
-			'message' => 'OK',
-		]);
+		return $this->respond();
 	}
 
-/*
-	public function store($id)
+
+	/**
+	 * Creo un kpi o parcial.
+	 * 
+	 * @param  KpiFormApiRequest $request
+	 * @return json
+	 */
+	public function store(KpiFormApiRequest $request)
 	{
-		$response = "adios";
+		$array = $request->formatData()->all();
 
-		return new JsonResponse([
-			'code'    => 400,
-			'message' => $response
-		]);
+		unset($array['id']);
+
+		$kpi = DB::table('kpis')->insert($array);
+
+		return $this->respond();
 	}
 
 
-*/
+	/**
+	 * Elimino un kpi/parcial mediante el id.
+	 * 
+	 * @param  $id
+	 */
 	public function destroy($id)
 	{
 		$kpi = Kpi::find($id);
 
 		if($kpi == null) {
-			return new JsonResponse([
-				'code'    => 400,
-				'message' => 'Not Found'
-			]);
+			return $this->respondNotFound();
 		}
 
 		$kpi->delete();
 
-		return new JsonResponse([
-			'code'    => 200,
-			'message' => 'OK'
-		]);
+		return $this->respond();
 	}
 
 

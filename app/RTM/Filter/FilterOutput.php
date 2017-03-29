@@ -11,7 +11,7 @@ class FilterOutput
 		}
 
 		$response = [
-			'kpis' => $this->formaKpis($dataIn['equations']['kpis']),
+			'kpis' => $this->formatKpis($dataIn['equations']['kpis']),
 			'data' => $dataIn['response']
 		];
 
@@ -62,7 +62,8 @@ class FilterOutput
 		return $response;
 	}
 
-	private function formaKpis($kpis)
+
+	private function formatKpis($kpis)
 	{
 		$response = array();
 

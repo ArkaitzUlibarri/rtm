@@ -2970,25 +2970,21 @@ var app = new Vue({
 			};
 
 			var url = 'api/filter-kpis' + '?' + this.getAllQueryParams();
-			console.log('http://rtm.app:8000/' + url);
+			//console.log('http://rtm.app:8000/' + url);
 
 			axios.get(url).then(function (response) {
-				if ('data' in response.data) {
-					vm.data = response.data.data.data;
-					vm.headers = vm.setHeaders(vm.data[0]);
-					vm.equations = response.data.data.kpis;
-					vm.updateChartOptions();
-				} else {
-					toastr.warning(response.data.message);
-
-					if ('errors' in response.data) {
-						for (var key in response.data.errors) {
-							toastr.error(response.data.errors[key]);
-						}
-					}
-				}
+				vm.data = response.data.data;
+				vm.headers = vm.setHeaders(vm.data[0]);
+				vm.equations = response.data.kpis;
+				vm.updateChartOptions();
 			}).catch(function (error) {
-				//toastr.error(error.response.data.data, error.response.data.message);
+				if (Array.isArray(error.response.data)) {
+					error.response.data.forEach(function (error) {
+						toastr.error(error);
+					});
+				} else {
+					toastr.error(error.response.data);
+				}
 			});
 		},
 
@@ -3086,6 +3082,13 @@ var app = new Vue({
 
 			// Completo el listado de items disponibles.
 			for (var key in this.data) {
+
+				// En el caso de agregado en nodo no tenemos el campo item.
+				if (!('item' in this.data[key])) {
+					this.chart.items.push('Aggregate');
+					break;
+				};
+
 				if (this.chart.items.indexOf(this.data[key].item) == -1) {
 					this.chart.items.push(this.data[key].item);
 				} else {
@@ -3126,9 +3129,10 @@ var app = new Vue({
 			// Recorro las lineas de datos resultantes del filtro
 			for (var key in this.data) {
 				var entry = this.data[key];
+				var itemName = !('item' in entry) ? 'Aggregate' : entry.item;
 
 				// Si el elemento actual no esta en el array de posiciones lo descartamos
-				if (!(entry.item in idxFields)) continue;
+				if (!(itemName in idxFields)) continue;
 
 				// Doy formato al periodo temporal
 				var dateTime = this.shortDateTime(entry.date, entry.time);
@@ -3141,13 +3145,13 @@ var app = new Vue({
 					if (!(dateTime in arrayTemp[kpi])) {
 						var array = new Array(countFields).fill(null);
 						array[idxFields['Time']] = dateTime;
-						array[idxFields[entry.item]] = entry[kpi];
+						array[idxFields[itemName]] = entry[kpi];
 						arrayTemp[kpi][dateTime] = array;
 						continue;
 					}
 
 					// Completamos el valor del kpi para el item actual si ya existia el registro
-					arrayTemp[kpi][dateTime][idxFields[entry.item]] = entry[kpi];
+					arrayTemp[kpi][dateTime][idxFields[itemName]] = entry[kpi];
 				}
 			}
 
@@ -4021,6 +4025,7 @@ window.axios.interceptors.response.use(function (response) {
   __WEBPACK_IMPORTED_MODULE_0__core_Loading__["a" /* default */].hide();
   return response;
 }, function (error) {
+  __WEBPACK_IMPORTED_MODULE_0__core_Loading__["a" /* default */].hide();
   return Promise.reject(error);
 });
 
@@ -4042,7 +4047,7 @@ window.axios.interceptors.response.use(function (response) {
  */
 
 window.toastr = __webpack_require__(13);
-toastr.options.timeOut = 3000;
+toastr.options.timeOut = 5000;
 toastr.options.newestOnTop = true;
 toastr.options.progressBar = false;
 toastr.options.positionClass = 'toast-bottom-right';

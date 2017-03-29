@@ -2909,8 +2909,8 @@ var app = new Vue({
 		var vm = this;
 
 		axios.all([axios.get('api/counter'), axios.get('api/kpi', { params: { type: vm.filter.type } })]).then(axios.spread(function (counter, kpi) {
-			vm.availableCounters = counter.data.data;
-			vm.kpis = kpi.data.data;
+			//vm.availableCounters = counter.data;
+			vm.kpis = kpi.data;
 		}));
 	},
 	created: function created() {
@@ -2931,7 +2931,7 @@ var app = new Vue({
 				console.log("Campos no cargados");
 			}
 
-			Event.$emit('InitializeKpiForm', 'update', row, _this2.partials);
+			Event.$emit('InitializeKpiForm', 'edit', row, _this2.partials);
 		});
 
 		/**
@@ -2961,7 +2961,7 @@ var app = new Vue({
    */
 		showCreateModal: function showCreateModal() {
 			if (this.availableCounters == []) {
-				console.log("Campos no cargados");
+				toastr.error('Campos no cargados');
 			}
 
 			Event.$emit('InitializeKpiForm', 'new', {
@@ -2984,9 +2984,9 @@ var app = new Vue({
 					type: vm.filter.type
 				}
 			}).then(function (response) {
-				vm.kpis = response.data.data;
+				vm.kpis = response.data;
 			}).catch(function (error) {
-				console.log(error);
+				toastr.error(error.response.data);
 			});
 		}
 	}
@@ -3373,6 +3373,12 @@ module.exports = function() {
 //
 //
 //
+//
+//
+//
+//
+//
+//
 
 
 
@@ -3396,7 +3402,7 @@ module.exports = function() {
 			action: '',
 			hasRelativeTh: false,
 			hasAbsoluteTh: false,
-			numbers: [1, 2, 3, 4, 5, 6, 7, 8],
+			numbers: [{ value: '', text: '-' }, { value: '1', text: '1' }, { value: '2', text: '2' }, { value: '3', text: '3' }, { value: '4', text: '4' }, { value: '5', text: '5' }, { value: '6', text: '6' }],
 			kpiOptions: [],
 			errors: new __WEBPACK_IMPORTED_MODULE_0__core_Errors_js__["a" /* default */](),
 			kpi: {
@@ -3413,13 +3419,13 @@ module.exports = function() {
 				threshold_yellow: '',
 				threshold_aggregate_yellow: '',
 				threshold_relative: '',
-				threshold_relative_n: 4,
+				threshold_relative_n: '',
 				threshold_relative_condition: '',
 				threshold_relative_condition_kpi: '',
 				threshold_aggregate_relative: '',
-				threshold_aggregate_relative_n: 4,
+				threshold_aggregate_relative_n: '',
 				threshold_aggregate_absolute: '',
-				threshold_aggregate_absolute_n: 4
+				threshold_aggregate_absolute_n: ''
 			}
 		};
 	},
@@ -3430,29 +3436,35 @@ module.exports = function() {
    * Inicializo las variables del kpi
    */
 		Event.$on('InitializeKpiForm', function (action, properties, partials) {
-
-			console.log(_this.availableCounters);
-
 			_this.action = action;
 			_this.kpiOptions = partials;
 			_this.hasRelativeTh = false;
 			_this.hasAbsoluteTh = false;
 			_this.errors.record({});
 
-			// Establezco todos los valores a ""
+			// Inicializo los valores a su valor por defecto
 			for (var key in _this.kpi) {
 				_this.kpi[key] = '';
-			}
-
-			if (action == 'new') {
-				_this.kpi.threshold_relative_n = 4;
-				_this.kpi.threshold_aggregate_relative_n = 4;
-				_this.kpi.threshold_aggregate_absolute_n = 4;
 			}
 
 			// Completo los campos pasados por argumento
 			for (var _key in properties) {
 				_this.kpi[_key] = properties[_key];
+
+				if (action == 'edit') {
+					if (_key == 'threshold_aggregate_relative' && _this.isNumeric(properties[_key])) {
+						_this.hasRelativeTh = true;
+					} else if (_key == 'threshold_aggregate_absolute' && _this.isNumeric(properties[_key])) {
+						_this.hasAbsoluteTh = true;
+					}
+				}
+			}
+
+			if (_this.kpi.symbol_red == null) {
+				_this.kpi.symbol_red = '';
+			}
+			if (_this.kpi.symbol_yellow == null) {
+				_this.kpi.symbol_yellow = '';
 			}
 
 			$('#kpi-form').modal('show');
@@ -3467,17 +3479,25 @@ module.exports = function() {
 		onSubmit: function onSubmit() {
 			this.errors.record(this.validateForm());
 
-			if (this.errors.any()) {
-				return;
-			}
+			if (this.errors.any()) return;
 
 			var vm = this;
 
-			axios.put('api/kpi/' + vm.kpi.id, vm.kpi).then(function (response) {
+			if (vm.action == 'edit') {
+				axios.patch('api/kpi/' + vm.kpi.id, vm.kpi).then(function (response) {
+					$('#kpi-form').modal('hide');
+					Event.$emit('LoadKpis');
+				}).catch(function (error) {
+					vm.showErrors(error.response.data);
+				});
+				return;
+			}
+
+			axios.post('api/kpi', vm.kpi).then(function (response) {
 				$('#kpi-form').modal('hide');
 				Event.$emit('LoadKpis');
 			}).catch(function (error) {
-				console.log(error);
+				vm.showErrors(error.response.data);
 			});
 		},
 
@@ -3500,9 +3520,9 @@ module.exports = function() {
 					tech: vm.kpi.tech
 				}
 			}).then(function (response) {
-				vm.kpiOptions = response.data.data;
+				vm.kpiOptions = response.data;
 			}).catch(function (error) {
-				console.log(error);
+				vm.showErrors(error.response.data);
 			});
 		},
 
@@ -3514,15 +3534,17 @@ module.exports = function() {
 			var symbols = ['==', '!=', '<', '>', '<=', '>='];
 			var list = {};
 
+			// Valido el nombre del kpi
 			if (this.kpi.name == '' || this.kpi.name.length <= 2 || this.kpi.name.length > 50) {
 				list['name'] = 'Valid name required.';
 			}
 
+			// Valido que se ha insertado un texto, la equación se valida en el servidor.
 			if (this.kpi.equation == '') {
 				list['equation'] = 'Valid equation required.';
 			}
 
-			// He seleccionado un simbolo para el threshold principal
+			// Threshold principal
 			if (symbols.indexOf(this.kpi.symbol_red) !== -1) {
 				if (!this.isNumeric(this.kpi.threshold_red)) {
 					list['threshold_red'] = 'Must be a number';
@@ -3532,7 +3554,7 @@ module.exports = function() {
 				}
 			}
 
-			// He seleccionado un simbolo para el threshold secundario
+			// Threshold secundario
 			if (symbols.indexOf(this.kpi.symbol_yellow) !== -1) {
 				if (!this.isNumeric(this.kpi.threshold_yellow)) {
 					list['threshold_yellow'] = 'Must be a number';
@@ -3542,36 +3564,40 @@ module.exports = function() {
 				}
 			}
 
+			// Si el kpi es relativo hago las siguiente validaciones
 			if (this.hasRelativeTh) {
 				if (!this.isNumeric(this.kpi.threshold_relative)) {
 					list['threshold_relative'] = 'Must be a number';
 				}
 
-				if (this.kpi.tech != '4g') {
-					if (!this.isNumeric(this.kpi.threshold_aggregate_relative)) {
-						list['threshold_aggregate_relative'] = 'Must be a number';
-					}
+				if (!this.isNumeric(this.kpi.threshold_aggregate_relative)) {
+					list['threshold_aggregate_relative'] = 'Must be a number';
 				}
 			}
 
+			// Si el kpi es absoluto compruebo que tenga un threshold_
 			if (this.hasAbsoluteTh) {
-				if (this.kpi.tech != '4g') {
-					if (!this.isNumeric(this.kpi.threshold_aggregate_absolute)) {
-						list['threshold_aggregate_absolute'] = 'Must be a number';
-					}
+				if (!this.isNumeric(this.kpi.threshold_aggregate_absolute)) {
+					list['threshold_aggregate_absolute'] = 'Must be a number';
 				}
 			}
 
 			return list;
 		},
-
-
-		/**
-   * Compruebo que el texto sea un numero.
-   */
-		isNumeric: function isNumeric(n) {
-			return !isNaN(parseFloat(n)) && isFinite(n);
+		updateMonitoring: function updateMonitoring(type) {
+			if (type == 'relative' && this.hasRelativeTh == false) {
+				this.kpi.threshold_relative = '';
+				this.kpi.threshold_relative_n = '';
+				this.kpi.threshold_relative_condition = '';
+				this.kpi.threshold_relative_condition_kpi = '';
+				this.kpi.threshold_aggregate_relative = '';
+				this.kpi.threshold_aggregate_relative_n = '';
+			} else if (type == 'absolute' && this.hasAbsoluteTh == false) {
+				this.kpi.threshold_aggregate_absolute = '';
+				this.kpi.threshold_aggregate_absolute_n = '';
+			}
 		},
+
 
 		/**
    * Refresco el formulario cuando cambio el tipo.
@@ -3593,11 +3619,11 @@ module.exports = function() {
 			}
 
 			this.kpi.threshold_relative = '';
-			this.kpi.threshold_relative_n = 4;
+			this.kpi.threshold_relative_n = '';
 			this.kpi.threshold_aggregate_relative = '';
-			this.kpi.threshold_aggregate_relative_n = 4;
+			this.kpi.threshold_aggregate_relative_n = '';
 			this.kpi.threshold_aggregate_absolute = '';
-			this.kpi.threshold_aggregate_absolute_n = 4;
+			this.kpi.threshold_aggregate_absolute_n = '';
 		},
 
 
@@ -3609,14 +3635,37 @@ module.exports = function() {
 
 			if (this.kpi.tech == '4g') {
 				this.kpi.threshold_aggregate_relative = '';
-				this.kpi.threshold_aggregate_relative_n = 4;
+				this.kpi.threshold_aggregate_relative_n = '';
 				this.kpi.threshold_aggregate_absolute = '';
-				this.kpi.threshold_aggregate_absolute_n = 4;
+				this.kpi.threshold_aggregate_absolute_n = '';
 
 				this.errors.clear('threshold_aggregate_relative');
 				this.errors.clear('threshold_aggregate_absolute');
 			}
+		},
+
+
+		/**
+   * Visualizo los errors devueltos de la consulta Ajax
+   */
+		showErrors: function showErrors(errors) {
+			if (Array.isArray(errors)) {
+				errors.forEach(function (error) {
+					toastr.error(error);
+				});
+			} else {
+				toastr.error(errors);
+			}
+		},
+
+
+		/**
+   * Compruebo que el texto sea un numero.
+   */
+		isNumeric: function isNumeric(n) {
+			return !isNaN(parseFloat(n)) && isFinite(n);
 		}
+
 	}
 };
 /* WEBPACK VAR INJECTION */}.call(__webpack_exports__, __webpack_require__(1)))
@@ -3740,7 +3789,7 @@ module.exports = function() {
 				Event.$emit('RemoveItemFromArray', vm.id);
 				$('#delete-modal').modal('hide');
 			}).catch(function (error) {
-				console.log(error);
+				toastr.error(error.response.data);
 			});
 		},
 
@@ -3752,9 +3801,9 @@ module.exports = function() {
 					partial: partial
 				}
 			}).then(function (response) {
-				vm.kpis = response.data.data;
+				vm.kpis = response.data;
 			}).catch(function (error) {
-				console.log(error);
+				toastr.error(error.response.data);
 			});
 		}
 	}
@@ -4134,12 +4183,12 @@ module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c
         "font-weight": "bold",
         "color": "#27ae60"
       }
-    }, [_vm._v(_vm._s(row.threshold_aggregate_absolute == '' ? '✔' : ''))]), _vm._v(" "), _c('td', {
+    }, [_vm._v(_vm._s(row.threshold_aggregate_absolute == null ? '' : '✔'))]), _vm._v(" "), _c('td', {
       staticStyle: {
         "font-weight": "bold",
         "color": "#27ae60"
       }
-    }, [_vm._v(_vm._s(row.threshold_aggregate_relative == '' ? '✔' : ''))]), _vm._v(" "), _c('td', [_vm._v(_vm._s(_vm.isPartial(row.type, row.symbol_red)))]), _vm._v(" "), _c('td', [_vm._v(_vm._s(_vm.isPartial(row.type, row.threshold_red)))]), _vm._v(" "), _c('td', [_vm._v(_vm._s(_vm.isPartial(row.type, row.threshold_aggregate_red)))]), _vm._v(" "), _c('td', [_vm._v(_vm._s(_vm.isPartial(row.type, row.symbol_yellow)))]), _vm._v(" "), _c('td', [_vm._v(_vm._s(_vm.isPartial(row.type, row.threshold_yellow)))]), _vm._v(" "), _c('td', [_vm._v(_vm._s(_vm.isPartial(row.type, row.threshold_aggregate_yellow)))]), _vm._v(" "), _c('td', [_c('a', {
+    }, [_vm._v(_vm._s(row.threshold_aggregate_relative == null ? '' : '✔'))]), _vm._v(" "), _c('td', [_vm._v(_vm._s(_vm.isPartial(row.type, row.symbol_red)))]), _vm._v(" "), _c('td', [_vm._v(_vm._s(_vm.isPartial(row.type, row.threshold_red)))]), _vm._v(" "), _c('td', [_vm._v(_vm._s(_vm.isPartial(row.type, row.threshold_aggregate_red)))]), _vm._v(" "), _c('td', [_vm._v(_vm._s(_vm.isPartial(row.type, row.symbol_yellow)))]), _vm._v(" "), _c('td', [_vm._v(_vm._s(_vm.isPartial(row.type, row.threshold_yellow)))]), _vm._v(" "), _c('td', [_vm._v(_vm._s(_vm.isPartial(row.type, row.threshold_aggregate_yellow)))]), _vm._v(" "), _c('td', [_c('a', {
       staticClass: "btn btn-primary btn-sm custom-kpi-table-btn",
       attrs: {
         "href": "#",
@@ -4325,7 +4374,7 @@ module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c
     staticClass: "modal-header"
   }, [_vm._m(0), _vm._v(" "), _c('h4', {
     staticClass: "modal-title"
-  }, [_vm._v(_vm._s(_vm.action) + " KPI")])]), _vm._v(" "), _c('div', {
+  }, [_vm._v(_vm._s(_vm.action == 'new' ? 'New KPI' : 'Edit KPI'))])]), _vm._v(" "), _c('div', {
     staticClass: "modal-body"
   }, [_vm._m(1), _vm._v(" "), _c('div', {
     staticClass: "tab-content",
@@ -4384,6 +4433,9 @@ module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c
       expression: "kpi.type"
     }],
     staticClass: "form-control input-sm",
+    attrs: {
+      "disabled": _vm.action == 'edit'
+    },
     on: {
       "change": [function($event) {
         var $$selectedVal = Array.prototype.filter.call($event.target.options, function(o) {
@@ -4427,6 +4479,9 @@ module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c
       expression: "kpi.tech"
     }],
     staticClass: "form-control input-sm",
+    attrs: {
+      "disabled": _vm.action == 'edit'
+    },
     on: {
       "change": [function($event) {
         var $$selectedVal = Array.prototype.filter.call($event.target.options, function(o) {
@@ -4466,6 +4521,9 @@ module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c
       expression: "kpi.vendor"
     }],
     staticClass: "form-control input-sm",
+    attrs: {
+      "disabled": _vm.action == 'edit'
+    },
     on: {
       "change": [function($event) {
         var $$selectedVal = Array.prototype.filter.call($event.target.options, function(o) {
@@ -4755,6 +4813,9 @@ module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c
       "checked": Array.isArray(_vm.hasRelativeTh) ? _vm._i(_vm.hasRelativeTh, null) > -1 : (_vm.hasRelativeTh)
     },
     on: {
+      "click": function($event) {
+        _vm.updateMonitoring('relative')
+      },
       "__c": function($event) {
         var $$a = _vm.hasRelativeTh,
           $$el = $event.target,
@@ -4842,9 +4903,9 @@ module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c
   }, _vm._l((_vm.numbers), function(number) {
     return _c('option', {
       domProps: {
-        "value": number
+        "value": number.value
       }
-    }, [_vm._v(_vm._s(number))])
+    }, [_vm._v(_vm._s(number.text))])
   }))]), _vm._v(" "), _c('div', {
     staticClass: "form-group col-xs-12 col-sm-3",
     class: {
@@ -4905,9 +4966,9 @@ module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c
   }, _vm._l((_vm.numbers), function(number) {
     return _c('option', {
       domProps: {
-        "value": number
+        "value": number.value
       }
-    }, [_vm._v(_vm._s(number))])
+    }, [_vm._v(_vm._s(number.text))])
   }))])]), _vm._v(" "), _c('div', {
     staticClass: "row"
   }, [_c('div', {
@@ -4992,6 +5053,9 @@ module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c
       "checked": Array.isArray(_vm.hasAbsoluteTh) ? _vm._i(_vm.hasAbsoluteTh, null) > -1 : (_vm.hasAbsoluteTh)
     },
     on: {
+      "click": function($event) {
+        _vm.updateMonitoring('absolute')
+      },
       "__c": function($event) {
         var $$a = _vm.hasAbsoluteTh,
           $$el = $event.target,
@@ -5079,9 +5143,9 @@ module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c
   }, _vm._l((_vm.numbers), function(number) {
     return _c('option', {
       domProps: {
-        "value": number
+        "value": number.value
       }
-    }, [_vm._v(_vm._s(number))])
+    }, [_vm._v(_vm._s(number.text))])
   }))])])])])])]), _vm._v(" "), _c('div', {
     staticClass: "tab-pane",
     attrs: {
@@ -5134,7 +5198,7 @@ module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c
         _vm.onSubmit($event)
       }
     }
-  }, [_vm._v("\n\t\t\t\t\t\t" + _vm._s(_vm.action) + "\n\t\t\t\t")])])])]), _vm._v(" "), _c('pre', [_vm._v("\n\t@" + _vm._s(_vm.$props) + "\n\t")])])
+  }, [_vm._v("\n\t\t\t\t\t\t" + _vm._s(_vm.action == 'new' ? 'Add' : 'Edit') + "\n\t\t\t\t")])])])])])
 },staticRenderFns: [function (){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;
   return _c('button', {
     staticClass: "close",
@@ -5655,6 +5719,7 @@ window.axios.interceptors.response.use(function (response) {
   __WEBPACK_IMPORTED_MODULE_0__core_Loading__["a" /* default */].hide();
   return response;
 }, function (error) {
+  __WEBPACK_IMPORTED_MODULE_0__core_Loading__["a" /* default */].hide();
   return Promise.reject(error);
 });
 
@@ -5676,7 +5741,7 @@ window.axios.interceptors.response.use(function (response) {
  */
 
 window.toastr = __webpack_require__(13);
-toastr.options.timeOut = 3000;
+toastr.options.timeOut = 5000;
 toastr.options.newestOnTop = true;
 toastr.options.progressBar = false;
 toastr.options.positionClass = 'toast-bottom-right';
