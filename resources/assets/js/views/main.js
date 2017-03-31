@@ -122,7 +122,7 @@ const app = new Vue({
 			};
 
 			let url = 'api/filter-kpis' + '?' + this.getAllQueryParams();
-			//console.log('http://rtm.app:8000/' + url);
+			console.log('http://rtm.app:8000/' + url);
 
 			axios.get(url)
 				.then(function (response) {

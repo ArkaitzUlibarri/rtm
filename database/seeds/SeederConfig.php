@@ -8,11 +8,11 @@ class SeederConfig
 	 * Fecha de inicio y fin para crear contadores.
 	 */
 	public static function START_DATE() {
-		return Carbon::create(2017, 3, 27, 18, 15, 0);
+		return Carbon::create(2017, 3, 30, 18, 15, 0);
 	}
 
 	public static function END_DATE() {
-		return Carbon::create(2017, 3, 28, 18, 0, 0);
+		return Carbon::create(2017, 3, 31, 18, 0, 0);
 	}
 
 	/**
@@ -42,9 +42,24 @@ class SeederConfig
 	];
 
 	/**
-	 * Tecnologías disponibles.
+	 * Tecnologias disponibles.
 	 */
 	const TECHNOLOGIES = ['2g', '3g', '4g'];
+
+	/**
+	 * Tecnologias disponibles.
+	 */
+	const VENDORS = ['eri', 'hua'];
+
+	/**
+	 * Tipos de alarmas procesadas por el servidor indicando en cada una
+	 * de ellas los campos que aplican.
+	 */
+	//const ALARMS = ['traffic_loss', 'sleeping_cell', 'relative', 'absolute'];
+	const ALARMS = [
+		'absolute' => ['cell' => false, 'relative_threshold' => false, 'threshold' => true]
+	];
+
 
 	/**
 	 * Valores para lo contadores para hacer pruebas.

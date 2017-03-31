@@ -71,9 +71,10 @@ class FilterRepository
 	{
 		$kpis = $this->formatString($equations['kpis']);
 		$partials = $this->formatString($equations['partials']);
+		$partials = $partials != '' ? ',' . $partials : '';
 		$fields = $this->getFields($this->vendorFrom($table), $this->techFrom($table));
 
-		return "SELECT created_at, item_id as item, {$kpis} FROM (SELECT created_at, item_id, {$fields}, {$partials} FROM {$table} WHERE item_id IN ({$ids}) AND created_at >= '{$startDate}' AND created_at <= '{$endDate}' ORDER BY created_at DESC, item_id ASC) as tp";
+		return "SELECT created_at, item_id as item, {$kpis} FROM (SELECT created_at, item_id, {$fields}{$partials} FROM {$table} WHERE item_id IN ({$ids}) AND created_at >= '{$startDate}' AND created_at <= '{$endDate}' ORDER BY created_at DESC, item_id ASC) as tp";
 	}
 
 

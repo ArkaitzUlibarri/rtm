@@ -77,5 +77,5 @@ class CountersTableSeeder extends Seeder
 				$now->addMinutes(15);
 			}
 		}
-    }
+	}
 }

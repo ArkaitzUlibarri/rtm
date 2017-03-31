@@ -140,7 +140,7 @@ class KpiRepository
 	 * @param  array  $technologies
 	 * @return array
 	 */
-	private function partials(array $vendors, array $technologies)
+	public function partials(array $vendors, array $technologies)
 	{
 		return DB::table('kpis')
 			->where('type', '=', 'prt')
@@ -174,5 +174,29 @@ class KpiRepository
 		}
 
 		return $kpi->first() != null ? true : false;
+	}
+
+	/**
+	 * Filtro los kpis absolutos.
+	 * 
+	 * @return array
+	 */
+	public function absoluteKpis()
+	{
+		return DB::table('kpis')
+			->where('threshold_aggregate_absolute', '!=', null)
+			->where('type', 'std')
+			->select(
+				'id',
+				'name',
+				'vendor',
+				'tech',
+				'symbol_red as symbol',
+				'threshold_aggregate_absolute as threshold',
+				'threshold_aggregate_absolute_n as samples',
+				'equation'
+			)
+			->get()
+			->toArray();
 	}
 }

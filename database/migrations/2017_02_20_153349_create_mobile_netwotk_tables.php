@@ -13,6 +13,9 @@ class CreateMobileNetwotkTables extends Migration
 	 */
 	public function up()
 	{
+		/**
+		 * Provincias.
+		 */
 		Schema::create('provinces', function (Blueprint $table) {
 			$table->increments('id');
 
@@ -21,16 +24,19 @@ class CreateMobileNetwotkTables extends Migration
 				  ->references('id')->on('countries')
 				  ->onDelete('cascade');*/
 
-			$table->string('code')->unique();
-			$table->string('name');
+			$table->string('code', 3)->unique();
+			$table->string('name', 30);
 			$table->tinyInteger('zone')->unsigned();
 
 			//$table->unique(['country_id', 'code']);
 		});
 
+		/**
+		 * Tabla con las BSCs y RNCs.
+		 */
 		Schema::create('controllers', function (Blueprint $table) {
 			$table->increments('id');
-			$table->string('name')->index();
+			$table->string('name', 30)->index();
 
 			$table->integer('province_id')->unsigned();
 			$table->foreign('province_id')
@@ -38,32 +44,23 @@ class CreateMobileNetwotkTables extends Migration
 				  ->onDelete('cascade');
 
 			$table->enum('vendor', ['eri', 'hua']);
-			$table->enum('tech', ['2g', '3g', '4g']);
+			$table->enum('tech', ['2g', '3g']);
 		});
 
+		/**
+		 * Nodos de las tres tecnologias.
+		 */
 		Schema::create('nodes', function (Blueprint $table) {
 			$table->increments('id');
-			$table->string('name')->index();
+			$table->string('name', 30)->index();
 		});
 
-		Schema::create('node_alarms', function (Blueprint $table) {
-			$table->increments('id');
-			// $table->enum('tech', ['2g', '3g', 'gG']);
-
-			$table->integer('node_id')->unsigned()->index();
-			$table->foreign('node_id')
-				  ->references('id')->on('nodes')
-				  ->onDelete('cascade');
-
-			$table->dateTime('created_at');
-			$table->string('sever');
-			$table->string('specific_problem');
-			$table->mediumtext('mo');
-		});
-
+		/**
+		 * Celdas de las tres tecnologias.
+		 */
 		Schema::create('cells', function (Blueprint $table) {
 			$table->increments('id');
-			$table->string('name')->index();
+			$table->string('name', 30)->index();
 
 			$table->enum('vendor', ['eri', 'hua']);
 			$table->enum('tech', ['2g', '3g', '4g']);
@@ -92,7 +89,6 @@ class CreateMobileNetwotkTables extends Migration
 	 */
 	public function down()
 	{
-		Schema::dropIfExists('node_alarms');
 		Schema::dropIfExists('cells');
 		Schema::dropIfExists('nodes');
 		Schema::dropIfExists('controllers');
