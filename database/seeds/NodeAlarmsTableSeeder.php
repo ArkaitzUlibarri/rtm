@@ -34,7 +34,7 @@ class NodeAlarmsTableSeeder extends Seeder
 			{
 				DB::table('node_alarms')->insert([
 					'node_id'          => $node->id,
-					'created_at'       => $faker->dateTimeBetween('-1 years', 'now'),
+					'created_at'       => $faker->dateTimeBetween('-1 month', 'now'),
 					'sever'            => $faker->randomElement($sever),
 					'specific_problem' => $faker->randomElement($specificProblem),
 					'mo'               => $faker->sentence($nbWords = 6, $variableNbWords = true)

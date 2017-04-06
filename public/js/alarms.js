@@ -1,4 +1,4 @@
-webpackJsonp([1,4],{
+webpackJsonp([3,4],{
 
 /***/ 10:
 /***/ (function(module, exports) {
@@ -44,921 +44,156 @@ module.exports = function() {
 
 /***/ }),
 
-/***/ 139:
+/***/ 138:
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function($) {
 __webpack_require__(6);
 
+/**
+ * Registro los componentes necesarios.
+ */
+Vue.component('alarm-table', __webpack_require__(173));
+
+/**
+ * Archivos de configuracion.
+ */
+var FILTER = __webpack_require__(15);
+
 var app = new Vue({
 	el: '#app',
 
-	components: {
-		'kpi-form': __webpack_require__(176),
-		'kpi-delete': __webpack_require__(177),
-		'kpi-table': __webpack_require__(178)
-	},
-
 	data: {
-		// Kpis
-		kpis: [],
+		filter: {
+			type: 'node', // Tipo de alarma, nodo/historico (celda/controlador)			
+			for: 'last6h', // Periodo
+			values: 'NODE1' // Elementos a filtar (celda/nodo/controlador)
+		},
 
-		// Traduccion de nombres de campos con nombre
-		availableCounters: {},
+		// Campos disponibles para visualizar en la tabla
+		headers: [],
 
-		// Filters
-		filter: { type: 'std', tech: '2g', vendor: 'eri' },
-
-		// Item's ID to remove and the verification text
-		rowToDelete: { id: -1, input: '', validation: '', type: '' }
-
+		// Datos de las alarmas
+		data: []
 	},
 
 	computed: {
-		/**
-   * Filtro los parciales por vendor y tecnologia
-   * cuando si estamos en kpis estandar.
-   */
-		partials: function partials() {
-			var _this = this;
-
-			if (this.filter.type != 'std') return [];
-
-			var partials = [];
-			this.kpis.forEach(function (item) {
-				if (item.type == 'prt' && item.vendor == _this.filter.vendor && item.tech == _this.filter.tech) {
-					partials.push({ id: item.id, name: item.name });
-				}
-			});
-
-			return partials;
-		}
+		/*		showAggregateOption: function() {
+  			return (this.filter.by == 'node' || this.filter.by == 'province')
+  				? true
+  				: false;
+  		},*/
 	},
-
-	mounted: function mounted() {
-		var vm = this;
-
-		axios.all([axios.get('api/counter'), axios.get('api/kpi', { params: { type: vm.filter.type } })]).then(axios.spread(function (counter, kpi) {
-			//vm.availableCounters = counter.data;
-			vm.kpis = kpi.data;
-		}));
-	},
-	created: function created() {
-		var _this2 = this;
-
-		/**
-   * Refresco 
-   */
-		Event.$on('LoadKpis', function () {
-			_this2.fetchKpi();
-		});
-
-		/**
-   * Muestro el formulario modal para editar el kpi.
-   */
-		Event.$on('ShowFormModal', function (row) {
-			if (_this2.availableCounters == []) {
-				console.log("Campos no cargados");
-			}
-
-			Event.$emit('InitializeKpiForm', 'edit', row, _this2.partials);
-		});
-
-		/**
-   * Muestro el formulario modal para borrar el kpi.
-   */
-		Event.$on('ShowDeleteModal', function (row) {
-			Event.$emit('InitializeKpiDelete', row);
-		});
-
-		/**
-   * Elimino el kpi del array de kpis
-   */
-		Event.$on('RemoveItemFromArray', function (id) {
-			for (var i = _this2.kpis.length - 1; i >= 0; i--) {
-				if (_this2.kpis[i].id === id) {
-					_this2.kpis.splice(i, 1);
-					return;
-				}
-			}
-		});
-	},
-
 
 	methods: {
-		/**
-   * Show the modal box to create a new kpi
-   */
-		showCreateModal: function showCreateModal() {
-			if (this.availableCounters == []) {
-				toastr.error('Campos no cargados');
-			}
+		fetchData: function fetchData() {
+			var vm = this;
 
-			Event.$emit('InitializeKpiForm', 'new', {
-				'tech': this.filter.tech,
-				'vendor': this.filter.vendor,
-				'type': this.filter.type
-			}, this.partials);
+			vm.cleanData();
+
+			var url = 'api/alarms' + '?' + this.getAllQueryParams();
+			console.log('http://rtm.app:8000/' + url);
+
+			axios.get(url).then(function (response) {
+				if (response.data.length == 0) {
+					toastr.info("There are no items to show with current filter.");
+					return;
+				}
+
+				vm.data = response.data;
+				vm.headers = vm.setHeaders(vm.data[0]);
+			}).catch(function (error) {
+				console.log(error);
+				if (Array.isArray(error.response.data)) {
+					error.response.data.forEach(function (error) {
+						toastr.error(error);
+					});
+				} else {
+					toastr.error(error.response.data);
+				}
+			});
 		},
 
 
 		/**
-   * Get the kpis for the current group.
+   * Concateno los parametros del filtro separados por "&" para crear la url de filtrado.
    */
-		fetchKpi: function fetchKpi() {
-			var vm = this;
-			vm.kpis = [];
+		getAllQueryParams: function getAllQueryParams() {
+			var params = ['type=' + this.filter.type, 'end_date=' + document.getElementById('dtpToDate').children[0].value, 'for=' + this.filter.for, 'values=' + this.getInputArray(this.filter.values)].join('&');
 
-			axios.get('api/kpi', {
-				params: {
-					type: vm.filter.type
-				}
-			}).then(function (response) {
-				vm.kpis = response.data;
-			}).catch(function (error) {
-				toastr.error(error.response.data);
-			});
+			return params;
+		},
+
+
+		/**
+   * Creo un string de elementos separados por ",".
+   */
+		getInputArray: function getInputArray(input) {
+			// Elimino espacios
+			input = input.replace(/[ ]+/g, "");
+
+			// Cambios caracteres de separación por ","
+			return input.replace(/[-;:/|]+/g, ",");
+		},
+
+
+		/**
+   * Extraigo los campos del objeto para crear la cabecera de la tabla de alarmas.
+   */
+		setHeaders: function setHeaders(obj) {
+			var headers = [];
+
+			var properties = Object.keys(obj);
+			for (var key in properties) {
+				headers.push(properties[key]);
+			}
+
+			return headers;
+		},
+
+
+		/**
+   * Reseteo las variables de la tabla.
+   */
+		cleanData: function cleanData() {
+			this.headers = [];
+			this.data = [];
 		}
 	}
 });
 
 /**
- * Update the kpi type to filter
+ * Inicializo la fecha y hora del filtro.
  */
-$('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
-	var target = $(e.target).text().toLowerCase();
-
-	if (target == 'standard') {
-		app.filter.type = 'std';
-	} else if (target == 'dual') {
-		app.filter.type = 'tech';
-	} else if (target == 'vendor') {
-		app.filter.type = 'vnd';
-	}
-
-	// Hay pestañas en el formulario de kpis, por lo que hay
-	// que excluir la ejecucion de "fetchKpi" cuando se usen
-	if (['standard', 'dual', 'vendor'].includes(target)) {
-		app.fetchKpi();
-	}
+$('#dtpToDate').datetimepicker({
+	format: "YYYY-MM-DD HH:mm",
+	maxDate: 'now'
 });
+$('#dtpToDate').data("DateTimePicker").date(moment().format('YYYY-MM-DD HH:mm'));
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(1)))
 
 /***/ }),
 
-/***/ 163:
+/***/ 15:
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-/* WEBPACK VAR INJECTION */(function($) {Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__core_Errors_js__ = __webpack_require__(166);
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-
-
-
-
-/* harmony default export */ __webpack_exports__["default"] = {
-	template: '#kpi-form-template',
-
-	props: ['availableCounters'],
-	/*
- 	props: {
- 		counters: {
- 			type: Array,
- 			default: function () {
- 				return []
- 			}
- 		},
- 	},
- */
-	data: function data() {
-		return {
-			action: '',
-			hasRelativeTh: false,
-			hasAbsoluteTh: false,
-			numbers: [{ value: '', text: '-' }, { value: '1', text: '1' }, { value: '2', text: '2' }, { value: '3', text: '3' }, { value: '4', text: '4' }, { value: '5', text: '5' }, { value: '6', text: '6' }],
-			kpiOptions: [],
-			errors: new __WEBPACK_IMPORTED_MODULE_0__core_Errors_js__["a" /* default */](),
-			kpi: {
-				id: '',
-				name: '',
-				tech: '',
-				vendor: '',
-				type: '',
-				equation: '',
-				symbol_red: '',
-				threshold_red: '',
-				threshold_aggregate_red: '',
-				symbol_yellow: '',
-				threshold_yellow: '',
-				threshold_aggregate_yellow: '',
-				threshold_relative: '',
-				threshold_relative_n: '',
-				threshold_relative_condition: '',
-				threshold_relative_condition_kpi: '',
-				threshold_aggregate_relative: '',
-				threshold_aggregate_relative_n: '',
-				threshold_aggregate_absolute: '',
-				threshold_aggregate_absolute_n: ''
-			}
-		};
-	},
-	created: function created() {
-		var _this = this;
-
-		/**
-   * Inicializo las variables del kpi
-   */
-		Event.$on('InitializeKpiForm', function (action, properties, partials) {
-			_this.action = action;
-			_this.kpiOptions = partials;
-			_this.hasRelativeTh = false;
-			_this.hasAbsoluteTh = false;
-			_this.errors.record({});
-
-			// Inicializo los valores a su valor por defecto
-			for (var key in _this.kpi) {
-				_this.kpi[key] = '';
-			}
-
-			// Completo los campos pasados por argumento
-			for (var _key in properties) {
-				_this.kpi[_key] = properties[_key];
-
-				if (action == 'edit') {
-					if (_key == 'threshold_aggregate_relative' && _this.isNumeric(properties[_key])) {
-						_this.hasRelativeTh = true;
-					} else if (_key == 'threshold_aggregate_absolute' && _this.isNumeric(properties[_key])) {
-						_this.hasAbsoluteTh = true;
-					}
-				}
-			}
-
-			if (_this.kpi.symbol_red == null) {
-				_this.kpi.symbol_red = '';
-			}
-			if (_this.kpi.symbol_yellow == null) {
-				_this.kpi.symbol_yellow = '';
-			}
-
-			$('#kpi-form').modal('show');
-		});
-	},
-
-
-	methods: {
-		/**
-   * Ejecuto la accion del formulario.
-   */
-		onSubmit: function onSubmit() {
-			this.errors.record(this.validateForm());
-
-			if (this.errors.any()) return;
-
-			var vm = this;
-
-			if (vm.action == 'edit') {
-				axios.patch('api/kpi/' + vm.kpi.id, vm.kpi).then(function (response) {
-					$('#kpi-form').modal('hide');
-					Event.$emit('LoadKpis');
-				}).catch(function (error) {
-					vm.showErrors(error.response.data);
-				});
-				return;
-			}
-
-			axios.post('api/kpi', vm.kpi).then(function (response) {
-				$('#kpi-form').modal('hide');
-				Event.$emit('LoadKpis');
-			}).catch(function (error) {
-				vm.showErrors(error.response.data);
-			});
-		},
-
-
-		/**
-   * Obtengo los parciales disponibles para la tecnologia
-   * y vendor actual cuando insertamos un kpi estandar.
-   */
-		fetchPartial: function fetchPartial() {
-			if (this.kpi.type != 'std') {
-				return;
-			}
-
-			var vm = this;
-			vm.kpiOptions = [];
-
-			axios.get('api/partials', {
-				params: {
-					vendor: vm.kpi.vendor,
-					tech: vm.kpi.tech
-				}
-			}).then(function (response) {
-				vm.kpiOptions = response.data;
-			}).catch(function (error) {
-				vm.showErrors(error.response.data);
-			});
-		},
-
-
-		/**
-   * Valido el formulario.
-   */
-		validateForm: function validateForm() {
-			var symbols = ['==', '!=', '<', '>', '<=', '>='];
-			var list = {};
-
-			// Valido el nombre del kpi
-			if (this.kpi.name == '' || this.kpi.name.length <= 2 || this.kpi.name.length > 50) {
-				list['name'] = 'Valid name required.';
-			}
-
-			// Valido que se ha insertado un texto, la equación se valida en el servidor.
-			if (this.kpi.equation == '') {
-				list['equation'] = 'Valid equation required.';
-			}
-
-			// Threshold principal
-			if (symbols.indexOf(this.kpi.symbol_red) !== -1) {
-				if (!this.isNumeric(this.kpi.threshold_red)) {
-					list['threshold_red'] = 'Must be a number';
-				}
-				if (!this.isNumeric(this.kpi.threshold_aggregate_red)) {
-					list['threshold_aggregate_red'] = 'Must be a number';
-				}
-			}
-
-			// Threshold secundario
-			if (symbols.indexOf(this.kpi.symbol_yellow) !== -1) {
-				if (!this.isNumeric(this.kpi.threshold_yellow)) {
-					list['threshold_yellow'] = 'Must be a number';
-				}
-				if (!this.isNumeric(this.kpi.threshold_aggregate_yellow)) {
-					list['threshold_aggregate_yellow'] = 'Must be a number';
-				}
-			}
-
-			// Si el kpi es relativo hago las siguiente validaciones
-			if (this.hasRelativeTh) {
-				if (!this.isNumeric(this.kpi.threshold_relative)) {
-					list['threshold_relative'] = 'Must be a number';
-				}
-
-				if (!this.isNumeric(this.kpi.threshold_aggregate_relative)) {
-					list['threshold_aggregate_relative'] = 'Must be a number';
-				}
-			}
-
-			// Si el kpi es absoluto compruebo que tenga un threshold_
-			if (this.hasAbsoluteTh) {
-				if (!this.isNumeric(this.kpi.threshold_aggregate_absolute)) {
-					list['threshold_aggregate_absolute'] = 'Must be a number';
-				}
-			}
-
-			return list;
-		},
-		updateMonitoring: function updateMonitoring(type) {
-			if (type == 'relative' && this.hasRelativeTh == false) {
-				this.kpi.threshold_relative = '';
-				this.kpi.threshold_relative_n = '';
-				this.kpi.threshold_relative_condition = '';
-				this.kpi.threshold_relative_condition_kpi = '';
-				this.kpi.threshold_aggregate_relative = '';
-				this.kpi.threshold_aggregate_relative_n = '';
-			} else if (type == 'absolute' && this.hasAbsoluteTh == false) {
-				this.kpi.threshold_aggregate_absolute = '';
-				this.kpi.threshold_aggregate_absolute_n = '';
-			}
-		},
-
-
-		/**
-   * Refresco el formulario cuando cambio el tipo.
-   */
-		updateType: function updateType() {
-			this.errors.record({});
-
-			if (this.kpi.type == 'std') {
-				return;
-			}
-
-			if (this.kpi.type == 'prt') {
-				this.kpi.symbol_red = '';
-				this.kpi.threshold_red = '';
-				this.kpi.threshold_aggregate_red = '';
-				this.kpi.symbol_yellow = '';
-				this.kpi.threshold_yellow = '';
-				this.kpi.threshold_aggregate_yellow = '';
-			}
-
-			this.kpi.threshold_relative = '';
-			this.kpi.threshold_relative_n = '';
-			this.kpi.threshold_aggregate_relative = '';
-			this.kpi.threshold_aggregate_relative_n = '';
-			this.kpi.threshold_aggregate_absolute = '';
-			this.kpi.threshold_aggregate_absolute_n = '';
-		},
-
-
-		/**
-   * Refresco el fomulario cuando actualizo la tecnologia.
-   */
-		updateTech: function updateTech() {
-			this.fetchPartial();
-
-			if (this.kpi.tech == '4g') {
-				this.kpi.threshold_aggregate_relative = '';
-				this.kpi.threshold_aggregate_relative_n = '';
-				this.kpi.threshold_aggregate_absolute = '';
-				this.kpi.threshold_aggregate_absolute_n = '';
-
-				this.errors.clear('threshold_aggregate_relative');
-				this.errors.clear('threshold_aggregate_absolute');
-			}
-		},
-
-
-		/**
-   * Visualizo los errors devueltos de la consulta Ajax
-   */
-		showErrors: function showErrors(errors) {
-			if (Array.isArray(errors)) {
-				errors.forEach(function (error) {
-					toastr.error(error);
-				});
-			} else {
-				toastr.error(errors);
-			}
-		},
-
-
-		/**
-   * Compruebo que el texto sea un numero.
-   */
-		isNumeric: function isNumeric(n) {
-			return !isNaN(parseFloat(n)) && isFinite(n);
-		}
-
-	}
+Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "resolutions", function() { return resolutions; });
+var resolutions = {
+    'last1h': [{ name: 'ROP', value: 'rop' }, { name: 'Hour', value: 'hour' }],
+    'last3h': [{ name: 'ROP', value: 'rop' }, { name: 'Hour', value: 'hour' }],
+    'last6h': [{ name: 'ROP', value: 'rop' }, { name: 'Hour', value: 'hour' }],
+    'last12h': [{ name: 'Hour', value: 'hour' }, { name: 'ROP', value: 'rop' }],
+    'last1d': [{ name: 'Hour', value: 'hour' }, { name: 'ROP', value: 'rop' }],
+    'last3d': [{ name: 'Hour', value: 'hour' }, { name: 'Day', value: 'day' }],
+    'last7d': [{ name: 'Day', value: 'day' }],
+    'last28d': [{ name: 'Day', value: 'day' }]
 };
-/* WEBPACK VAR INJECTION */}.call(__webpack_exports__, __webpack_require__(1)))
 
 /***/ }),
 
-/***/ 164:
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-/* WEBPACK VAR INJECTION */(function($) {Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-
-/* harmony default export */ __webpack_exports__["default"] = {
-
-	template: '#delete-kpi-modal-template',
-
-	data: function data() {
-		return {
-			id: '',
-			type: '',
-			validation: '',
-			kpis: [],
-			input: ''
-		};
-	},
-
-
-	computed: {
-		/**
-   * Inhabilito el boton de borrando mientras existan kpis
-   * dependientes (borrado de parciales) o el campo de texto
-   * sea diferente al de validacion.
-   */
-		disableButton: function disableButton() {
-			if (this.kpis.length > 0) {
-				return true;
-			}
-
-			return this.input != this.validation ? true : false;
-		}
-	},
-
-	created: function created() {
-		var _this = this;
-
-		/**
-   * Inicializo las variables del kpi.
-   */
-		Event.$on('InitializeKpiDelete', function (row) {
-			_this.id = row.id;
-			_this.type = row.type;
-			_this.validation = row.name;
-			_this.kpis = [];
-			_this.input = '';
-
-			if (row.type == 'prt') {
-				_this.kpisByPartial('p' + row.id);
-			}
-
-			$('#delete-modal').modal('show');
-		});
-	},
-
-
-	methods: {
-		/**
-   * Borro el kpi, emito el evento para actualizar
-   * la tabla y cierro el formulario.
-   */
-		deleteItem: function deleteItem() {
-			if (this.disableButton) return;
-
-			var vm = this;
-
-			axios.delete('api/kpi/' + vm.id).then(function (response) {
-				Event.$emit('RemoveItemFromArray', vm.id);
-				$('#delete-modal').modal('hide');
-			}).catch(function (error) {
-				toastr.error(error.response.data);
-			});
-		},
-
-		kpisByPartial: function kpisByPartial(partial) {
-			var vm = this;
-
-			axios.get('api/kpi-dependencies', {
-				params: {
-					partial: partial
-				}
-			}).then(function (response) {
-				vm.kpis = response.data;
-			}).catch(function (error) {
-				toastr.error(error.response.data);
-			});
-		}
-	}
-};
-/* WEBPACK VAR INJECTION */}.call(__webpack_exports__, __webpack_require__(1)))
-
-/***/ }),
-
-/***/ 165:
+/***/ 160:
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -988,213 +223,59 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 //
 //
 //
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
 
 /* harmony default export */ __webpack_exports__["default"] = {
 
-	template: '#kpi-table-template',
+	template: '#alarm-table-template',
 
 	props: {
-		rows: { type: Array },
-		type: { type: String },
-		tech: { type: String },
-		vendor: { type: String },
-		url: { type: String }
-	},
-
-	computed: {
-		filteredRows: function filteredRows() {
-			var _this = this;
-
-			if (this.type == 'vnd') {
-				return this.rows.filter(function (row) {
-					return row.tech == _this.tech;
-				});
-			} else if (this.type == 'tech') {
-				return this.rows.filter(function (row) {
-					return row.vendor == _this.vendor;
-				});
+		rows: {
+			type: Array,
+			default: function _default() {
+				return [];
 			}
-
-			return this.rows.filter(function (row) {
-				return row.tech == _this.tech && row.vendor == _this.vendor;
-			});
+		},
+		headers: {
+			type: Array,
+			default: function _default() {
+				return [];
+			}
 		}
 	},
 
-	methods: {
-
-		isPartial: function isPartial(type, value) {
-			if (type == 'prt') {
-				return '-';
-			}
-			return value == null ? '-' : value;
-		},
-
-		/**
-   * Set the kpi row ID
-   */
-		setRowId: function setRowId(id) {
-			return "kpi-row-" + id;
-		},
-
-		/**
-   * Fire the event to show edit modal
-   */
-		editKpi: function editKpi(row) {
-			Event.$emit('ShowFormModal', row);
-		},
-
-		/**
-   * Fire the event to show delete modal
-   */
-		deleteKpi: function deleteKpi(row) {
-			Event.$emit('ShowDeleteModal', row);
-		}
-	}
+	methods: {}
 };
 
 /***/ }),
 
-/***/ 166:
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var Errors = function () {
-    function Errors() {
-        _classCallCheck(this, Errors);
-
-        this.errors = {};
-    }
-
-    _createClass(Errors, [{
-        key: "has",
-        value: function has(field) {
-            return this.errors.hasOwnProperty(field);
-        }
-    }, {
-        key: "any",
-        value: function any() {
-            return Object.keys(this.errors).length > 0;
-        }
-    }, {
-        key: "get",
-        value: function get(field) {
-            if (this.errors[field]) {
-                return this.errors[field];
-            }
-        }
-    }, {
-        key: "record",
-        value: function record(errors) {
-            this.errors = errors;
-        }
-    }, {
-        key: "clear",
-        value: function clear(field) {
-            delete this.errors[field];
-        }
-    }]);
-
-    return Errors;
-}();
-
-/* harmony default export */ __webpack_exports__["a"] = Errors;
-
-/***/ }),
-
-/***/ 168:
+/***/ 169:
 /***/ (function(module, exports, __webpack_require__) {
 
 exports = module.exports = __webpack_require__(4)();
-exports.push([module.i, "\n.custom-kpi-table-action-field {\r\n\tmin-width: 200px;\r\n\twidth: 200px;\n}\n.custom-kpi-table-btn {\r\n\twidth: 85px;\n}\r\n", ""]);
+exports.push([module.i, "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n", ""]);
 
 /***/ }),
 
-/***/ 170:
-/***/ (function(module, exports, __webpack_require__) {
-
-exports = module.exports = __webpack_require__(4)();
-exports.push([module.i, "\n.delete-alert-panel {\n\tcolor: #796620;\n\tbackground-color: #f8eec7;\n\tpadding: 15px;\n}\n.kpi-delete-list ul {\n\tborder-radius: 0px;\n\tborder: 1px solid #ccd0d2;\n\tpadding: .3em 1em;\n\theight: 6em;\n\toverflow: auto;\n}\n.kpi-delete-list li {\n\tlist-style-type: none;\n\tpadding: .1em 0;\n}\n\n", ""]);
-
-/***/ }),
-
-/***/ 171:
-/***/ (function(module, exports, __webpack_require__) {
-
-exports = module.exports = __webpack_require__(4)();
-exports.push([module.i, "\n.create-modal-panel {\n\tcolor: #33691e;\n\tbackground-color: #dcedc8;\n\tpadding: 15px;\n}\n.custom-panel {\n    border: 1px solid #d3e0e9;\n    margin-bottom: .7em;\n    padding: .7em;\n}\n\n", ""]);
-
-/***/ }),
-
-/***/ 176:
+/***/ 173:
 /***/ (function(module, exports, __webpack_require__) {
 
 
 /* styles */
-__webpack_require__(189)
+__webpack_require__(187)
 
 var Component = __webpack_require__(3)(
   /* script */
-  __webpack_require__(163),
+  __webpack_require__(160),
   /* template */
-  __webpack_require__(184),
+  __webpack_require__(181),
   /* scopeId */
   null,
   /* cssModules */
   null
 )
-Component.options.__file = "/home/vagrant/Code/rtm/resources/assets/js/components/configuration/KpiForm.vue"
+Component.options.__file = "/home/vagrant/Code/rtm/resources/assets/js/components/AlarmTable.vue"
 if (Component.esModule && Object.keys(Component.esModule).some(function (key) {return key !== "default" && key !== "__esModule"})) {console.error("named exports are not supported in *.vue files.")}
-if (Component.options.functional) {console.error("[vue-loader] KpiForm.vue: functional components are not supported with templates, they should use render functions.")}
+if (Component.options.functional) {console.error("[vue-loader] AlarmTable.vue: functional components are not supported with templates, they should use render functions.")}
 
 /* hot reload */
 if (false) {(function () {
@@ -1203,9 +284,9 @@ if (false) {(function () {
   if (!hotAPI.compatible) return
   module.hot.accept()
   if (!module.hot.data) {
-    hotAPI.createRecord("data-v-f8355528", Component.options)
+    hotAPI.createRecord("data-v-21583560", Component.options)
   } else {
-    hotAPI.reload("data-v-f8355528", Component.options)
+    hotAPI.reload("data-v-21583560", Component.options)
   }
 })()}
 
@@ -1214,1196 +295,66 @@ module.exports = Component.exports
 
 /***/ }),
 
-/***/ 177:
-/***/ (function(module, exports, __webpack_require__) {
-
-
-/* styles */
-__webpack_require__(188)
-
-var Component = __webpack_require__(3)(
-  /* script */
-  __webpack_require__(164),
-  /* template */
-  __webpack_require__(183),
-  /* scopeId */
-  null,
-  /* cssModules */
-  null
-)
-Component.options.__file = "/home/vagrant/Code/rtm/resources/assets/js/components/configuration/KpiModalDelete.vue"
-if (Component.esModule && Object.keys(Component.esModule).some(function (key) {return key !== "default" && key !== "__esModule"})) {console.error("named exports are not supported in *.vue files.")}
-if (Component.options.functional) {console.error("[vue-loader] KpiModalDelete.vue: functional components are not supported with templates, they should use render functions.")}
-
-/* hot reload */
-if (false) {(function () {
-  var hotAPI = require("vue-hot-reload-api")
-  hotAPI.install(require("vue"), false)
-  if (!hotAPI.compatible) return
-  module.hot.accept()
-  if (!module.hot.data) {
-    hotAPI.createRecord("data-v-7b3bc340", Component.options)
-  } else {
-    hotAPI.reload("data-v-7b3bc340", Component.options)
-  }
-})()}
-
-module.exports = Component.exports
-
-
-/***/ }),
-
-/***/ 178:
-/***/ (function(module, exports, __webpack_require__) {
-
-
-/* styles */
-__webpack_require__(186)
-
-var Component = __webpack_require__(3)(
-  /* script */
-  __webpack_require__(165),
-  /* template */
-  __webpack_require__(180),
-  /* scopeId */
-  null,
-  /* cssModules */
-  null
-)
-Component.options.__file = "/home/vagrant/Code/rtm/resources/assets/js/components/configuration/KpiTable.vue"
-if (Component.esModule && Object.keys(Component.esModule).some(function (key) {return key !== "default" && key !== "__esModule"})) {console.error("named exports are not supported in *.vue files.")}
-if (Component.options.functional) {console.error("[vue-loader] KpiTable.vue: functional components are not supported with templates, they should use render functions.")}
-
-/* hot reload */
-if (false) {(function () {
-  var hotAPI = require("vue-hot-reload-api")
-  hotAPI.install(require("vue"), false)
-  if (!hotAPI.compatible) return
-  module.hot.accept()
-  if (!module.hot.data) {
-    hotAPI.createRecord("data-v-1900c156", Component.options)
-  } else {
-    hotAPI.reload("data-v-1900c156", Component.options)
-  }
-})()}
-
-module.exports = Component.exports
-
-
-/***/ }),
-
-/***/ 180:
+/***/ 181:
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;
   return _c('span', [_c('div', {
+    directives: [{
+      name: "show",
+      rawName: "v-show",
+      value: (_vm.rows.length > 0),
+      expression: "rows.length > 0"
+    }],
     staticClass: "table-responsive"
   }, [_c('table', {
-    staticClass: "table"
-  }, [_vm._m(0), _vm._v(" "), _c('tbody', [_c('tr', {
-    directives: [{
-      name: "show",
-      rawName: "v-show",
-      value: (_vm.filteredRows.length === 0),
-      expression: "filteredRows.length === 0"
-    }]
-  }, [_c('td', {
-    staticClass: "text-centre",
-    attrs: {
-      "colspan": "13"
-    }
-  }, [_vm._v("No Results")])]), _vm._v(" "), _vm._l((_vm.filteredRows), function(row) {
-    return _c('tr', {
-      directives: [{
-        name: "show",
-        rawName: "v-show",
-        value: (_vm.filteredRows.length !== 0),
-        expression: "filteredRows.length !== 0"
-      }],
-      attrs: {
-        "id": _vm.setRowId(row.id)
-      }
-    }, [_c('td', [_vm._v(_vm._s(row.name))]), _vm._v(" "), _c('td', [_vm._v(_vm._s(row.type == 'prt' ? 'p' + row.id : '-'))]), _vm._v(" "), _c('td', [_vm._v(_vm._s(row.vendor == null ? '-' : row.vendor))]), _vm._v(" "), _c('td', [_vm._v(_vm._s(row.tech == null ? '-' : row.tech))]), _vm._v(" "), _c('td', {
-      staticStyle: {
-        "font-weight": "bold",
-        "color": "#27ae60"
-      }
-    }, [_vm._v(_vm._s(row.threshold_aggregate_absolute == null ? '' : '✔'))]), _vm._v(" "), _c('td', {
-      staticStyle: {
-        "font-weight": "bold",
-        "color": "#27ae60"
-      }
-    }, [_vm._v(_vm._s(row.threshold_aggregate_relative == null ? '' : '✔'))]), _vm._v(" "), _c('td', [_vm._v(_vm._s(_vm.isPartial(row.type, row.symbol_red)))]), _vm._v(" "), _c('td', [_vm._v(_vm._s(_vm.isPartial(row.type, row.threshold_red)))]), _vm._v(" "), _c('td', [_vm._v(_vm._s(_vm.isPartial(row.type, row.threshold_aggregate_red)))]), _vm._v(" "), _c('td', [_vm._v(_vm._s(_vm.isPartial(row.type, row.symbol_yellow)))]), _vm._v(" "), _c('td', [_vm._v(_vm._s(_vm.isPartial(row.type, row.threshold_yellow)))]), _vm._v(" "), _c('td', [_vm._v(_vm._s(_vm.isPartial(row.type, row.threshold_aggregate_yellow)))]), _vm._v(" "), _c('td', [_c('a', {
-      staticClass: "btn btn-primary btn-sm custom-kpi-table-btn",
-      attrs: {
-        "href": "#",
-        "role": "button"
-      },
-      on: {
-        "click": function($event) {
-          $event.preventDefault();
-          _vm.editKpi(row)
-        }
-      }
-    }, [_c('span', {
-      staticClass: "glyphicon glyphicon-edit"
-    }), _vm._v(" Edit\r\n\t\t\t\t\t\t")]), _vm._v(" "), _c('a', {
-      staticClass: "btn btn-danger btn-sm custom-kpi-table-btn",
-      attrs: {
-        "href": "#",
-        "role": "button"
-      },
-      on: {
-        "click": function($event) {
-          $event.preventDefault();
-          _vm.deleteKpi(row)
-        }
-      }
-    }, [_c('span', {
-      staticClass: "glyphicon glyphicon-trash"
-    }), _vm._v(" Delete\r\n\t\t\t\t\t\t")])])])
-  })], 2)])])])
-},staticRenderFns: [function (){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;
-  return _c('thead', [_c('tr', [_c('th', [_vm._v("Name")]), _vm._v(" "), _c('th', [_vm._v("Partial")]), _vm._v(" "), _c('th', [_vm._v("Vendor")]), _vm._v(" "), _c('th', [_vm._v("Tech")]), _vm._v(" "), _c('th', [_vm._v("Absolute")]), _vm._v(" "), _c('th', [_vm._v("Relative")]), _vm._v(" "), _c('th', [_c('abbr', {
-    attrs: {
-      "title": "Main Symbol"
-    }
-  }, [_vm._v("MS")])]), _vm._v(" "), _c('th', [_c('abbr', {
-    attrs: {
-      "title": "Main Threshold"
-    }
-  }, [_vm._v("MT")])]), _vm._v(" "), _c('th', [_c('abbr', {
-    attrs: {
-      "title": "Main Aggregate Threshold"
-    }
-  }, [_vm._v("MAT")])]), _vm._v(" "), _c('th', [_c('abbr', {
-    attrs: {
-      "title": "Second Symbol"
-    }
-  }, [_vm._v("SS")])]), _vm._v(" "), _c('th', [_c('abbr', {
-    attrs: {
-      "title": "Second Threshold"
-    }
-  }, [_vm._v("ST")])]), _vm._v(" "), _c('th', [_c('abbr', {
-    attrs: {
-      "title": "Second Aggregate Threshold"
-    }
-  }, [_vm._v("SAT")])]), _vm._v(" "), _c('th', {
-    staticClass: "custom-kpi-table-action-field"
-  }, [_vm._v("Actions")])])])
-}]}
-module.exports.render._withStripped = true
-if (false) {
-  module.hot.accept()
-  if (module.hot.data) {
-     require("vue-hot-reload-api").rerender("data-v-1900c156", module.exports)
-  }
-}
-
-/***/ }),
-
-/***/ 183:
-/***/ (function(module, exports, __webpack_require__) {
-
-module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;
-  return _c('div', {
-    staticClass: "modal fade",
-    attrs: {
-      "id": "delete-modal",
-      "tabindex": "-1",
-      "role": "dialog"
-    }
-  }, [_c('div', {
-    staticClass: "modal-dialog",
-    attrs: {
-      "role": "document"
-    }
-  }, [_c('div', {
-    staticClass: "modal-content"
-  }, [_vm._m(0), _vm._v(" "), _c('div', {
-    staticClass: "delete-alert-panel"
-  }, [_vm._v("\n\t\t\t\tUnexpected bad things will happen if you don’t read this!\n\t\t\t")]), _vm._v(" "), _c('div', {
-    staticClass: "modal-body"
-  }, [_c('p', [_vm._v("This action "), _c('strong', [_vm._v("CANNOT")]), _vm._v(" be undone. This will permanently delete "), _c('strong', [_vm._v(_vm._s(_vm.validation))]), _vm._v(" " + _vm._s(_vm.type == 'prt' ? 'partial' : 'kpi') + ".\n\t\t\t\t")]), _vm._v(" "), _c('div', {
-    directives: [{
-      name: "show",
-      rawName: "v-show",
-      value: (_vm.kpis.length > 0),
-      expression: "kpis.length > 0"
-    }],
-    staticClass: "kpi-delete-list"
-  }, [_c('p', [_vm._v("The following kpis will be affected, delete them before continue:")]), _vm._v(" "), _c('ul', _vm._l((_vm.kpis), function(kpi) {
-    return _c('li', [_vm._v(_vm._s(kpi.name))])
-  }))]), _vm._v(" "), _c('p', [_vm._v("Please type in the items's full name to confirm.")]), _vm._v(" "), _c('input', {
-    directives: [{
-      name: "model",
-      rawName: "v-model",
-      value: (_vm.input),
-      expression: "input"
-    }],
-    staticClass: "form-control",
-    attrs: {
-      "type": "text"
-    },
-    domProps: {
-      "value": (_vm.input)
-    },
-    on: {
-      "input": function($event) {
-        if ($event.target.composing) { return; }
-        _vm.input = $event.target.value
-      }
-    }
-  })]), _vm._v(" "), _c('div', {
-    staticClass: "modal-footer"
-  }, [_c('button', {
-    staticClass: "btn btn-danger btn-block",
-    attrs: {
-      "type": "button",
-      "disabled": _vm.disableButton
-    },
-    on: {
-      "click": function($event) {
-        $event.preventDefault();
-        _vm.deleteItem()
-      }
-    }
-  }, [_vm._v("\n\t\t\t\t\t\tDelete\n\t\t\t\t")])])])])])
-},staticRenderFns: [function (){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;
-  return _c('div', {
-    staticClass: "modal-header"
-  }, [_c('button', {
-    staticClass: "close",
-    attrs: {
-      "type": "button",
-      "data-dismiss": "modal",
-      "aria-label": "Close"
-    }
-  }, [_c('span', {
-    attrs: {
-      "aria-hidden": "true"
-    }
-  }, [_vm._v("×")])]), _vm._v(" "), _c('h4', {
-    staticClass: "modal-title"
-  }, [_vm._v("Are you ABSOLUTELY sure?")])])
-}]}
-module.exports.render._withStripped = true
-if (false) {
-  module.hot.accept()
-  if (module.hot.data) {
-     require("vue-hot-reload-api").rerender("data-v-7b3bc340", module.exports)
-  }
-}
-
-/***/ }),
-
-/***/ 184:
-/***/ (function(module, exports, __webpack_require__) {
-
-module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;
-  return _c('div', {
-    staticClass: "modal fade",
-    attrs: {
-      "id": "kpi-form",
-      "tabindex": "-1",
-      "role": "dialog"
-    }
-  }, [_c('div', {
-    staticClass: "modal-dialog modal-lg",
-    attrs: {
-      "role": "document"
-    }
-  }, [_c('div', {
-    staticClass: "modal-content"
-  }, [_c('div', {
-    staticClass: "modal-header"
-  }, [_vm._m(0), _vm._v(" "), _c('h4', {
-    staticClass: "modal-title"
-  }, [_vm._v(_vm._s(_vm.action == 'new' ? 'New KPI' : 'Edit KPI'))])]), _vm._v(" "), _c('div', {
-    staticClass: "modal-body"
-  }, [_vm._m(1), _vm._v(" "), _c('div', {
-    staticClass: "tab-content",
-    staticStyle: {
-      "border": "solid 1px #ddd"
-    },
-    on: {
-      "keydown": function($event) {
-        _vm.errors.clear($event.target.name)
-      }
-    }
-  }, [_c('div', {
-    staticClass: "tab-pane active",
-    attrs: {
-      "id": "kpi-threshold"
-    }
-  }, [_c('div', {
-    staticClass: "row"
-  }, [_c('div', {
-    staticClass: "form-group col-xs-12 col-sm-6",
-    class: {
-      'has-error': _vm.errors.has('name')
-    }
-  }, [_c('label', {
-    staticClass: "control-label"
-  }, [_vm._v("Name")]), _vm._v(" "), _c('input', {
-    directives: [{
-      name: "model",
-      rawName: "v-model",
-      value: (_vm.kpi.name),
-      expression: "kpi.name"
-    }],
-    staticClass: "form-control input-sm",
-    attrs: {
-      "name": "name",
-      "type": "text",
-      "placeholder": "Text",
-      "autocomplete": "off"
-    },
-    domProps: {
-      "value": (_vm.kpi.name)
-    },
-    on: {
-      "input": function($event) {
-        if ($event.target.composing) { return; }
-        _vm.kpi.name = $event.target.value
-      }
-    }
-  })]), _vm._v(" "), _c('div', {
-    staticClass: "form-group col-xs-12 col-sm-2"
-  }, [_c('label', [_vm._v("Type")]), _vm._v(" "), _c('select', {
-    directives: [{
-      name: "model",
-      rawName: "v-model",
-      value: (_vm.kpi.type),
-      expression: "kpi.type"
-    }],
-    staticClass: "form-control input-sm",
-    attrs: {
-      "disabled": _vm.action == 'edit'
-    },
-    on: {
-      "change": [function($event) {
-        var $$selectedVal = Array.prototype.filter.call($event.target.options, function(o) {
-          return o.selected
-        }).map(function(o) {
-          var val = "_value" in o ? o._value : o.value;
-          return val
-        });
-        _vm.kpi.type = $event.target.multiple ? $$selectedVal : $$selectedVal[0]
-      }, _vm.updateType]
-    }
-  }, [_c('option', {
-    attrs: {
-      "value": "std"
-    }
-  }, [_vm._v("Kpi")]), _vm._v(" "), _c('option', {
-    attrs: {
-      "value": "tech"
-    }
-  }, [_vm._v("Dual")]), _vm._v(" "), _c('option', {
-    attrs: {
-      "value": "vnd"
-    }
-  }, [_vm._v("Vendor")]), _vm._v(" "), _c('option', {
-    attrs: {
-      "value": "prt"
-    }
-  }, [_vm._v("Partial")])])]), _vm._v(" "), _c('div', {
-    directives: [{
-      name: "show",
-      rawName: "v-show",
-      value: (_vm.kpi.type != 'tech'),
-      expression: "kpi.type!='tech'"
-    }],
-    staticClass: "form-group col-xs-12 col-sm-2"
-  }, [_c('label', [_vm._v("Technology")]), _vm._v(" "), _c('select', {
-    directives: [{
-      name: "model",
-      rawName: "v-model",
-      value: (_vm.kpi.tech),
-      expression: "kpi.tech"
-    }],
-    staticClass: "form-control input-sm",
-    attrs: {
-      "disabled": _vm.action == 'edit'
-    },
-    on: {
-      "change": [function($event) {
-        var $$selectedVal = Array.prototype.filter.call($event.target.options, function(o) {
-          return o.selected
-        }).map(function(o) {
-          var val = "_value" in o ? o._value : o.value;
-          return val
-        });
-        _vm.kpi.tech = $event.target.multiple ? $$selectedVal : $$selectedVal[0]
-      }, _vm.updateTech]
-    }
-  }, [_c('option', {
-    attrs: {
-      "value": "2g"
-    }
-  }, [_vm._v("2G")]), _vm._v(" "), _c('option', {
-    attrs: {
-      "value": "3g"
-    }
-  }, [_vm._v("3G")]), _vm._v(" "), _c('option', {
-    attrs: {
-      "value": "4g"
-    }
-  }, [_vm._v("4G")])])]), _vm._v(" "), _c('div', {
-    directives: [{
-      name: "show",
-      rawName: "v-show",
-      value: (_vm.kpi.type != 'vnd'),
-      expression: "kpi.type!='vnd'"
-    }],
-    staticClass: "form-group col-xs-12 col-sm-2"
-  }, [_c('label', [_vm._v("Vendor")]), _vm._v(" "), _c('select', {
-    directives: [{
-      name: "model",
-      rawName: "v-model",
-      value: (_vm.kpi.vendor),
-      expression: "kpi.vendor"
-    }],
-    staticClass: "form-control input-sm",
-    attrs: {
-      "disabled": _vm.action == 'edit'
-    },
-    on: {
-      "change": [function($event) {
-        var $$selectedVal = Array.prototype.filter.call($event.target.options, function(o) {
-          return o.selected
-        }).map(function(o) {
-          var val = "_value" in o ? o._value : o.value;
-          return val
-        });
-        _vm.kpi.vendor = $event.target.multiple ? $$selectedVal : $$selectedVal[0]
-      }, _vm.fetchPartial]
-    }
-  }, [_c('option', {
-    attrs: {
-      "value": "eri"
-    }
-  }, [_vm._v("ERI")]), _vm._v(" "), _c('option', {
-    attrs: {
-      "value": "hua"
-    }
-  }, [_vm._v("HUA")])])])]), _vm._v(" "), _c('span', {
-    directives: [{
-      name: "show",
-      rawName: "v-show",
-      value: (_vm.kpi.type != 'prt'),
-      expression: "kpi.type!='prt'"
-    }]
-  }, [_c('hr'), _vm._v(" "), _c('div', {
-    staticClass: "row"
-  }, [_c('div', {
-    staticClass: "form-group col-sm-4 col-xs-12"
-  }, [_c('label', [_vm._v("Main Symbol")]), _vm._v(" "), _c('select', {
-    directives: [{
-      name: "model",
-      rawName: "v-model",
-      value: (_vm.kpi.symbol_red),
-      expression: "kpi.symbol_red"
-    }],
-    staticClass: "form-control input-sm",
-    on: {
-      "change": function($event) {
-        var $$selectedVal = Array.prototype.filter.call($event.target.options, function(o) {
-          return o.selected
-        }).map(function(o) {
-          var val = "_value" in o ? o._value : o.value;
-          return val
-        });
-        _vm.kpi.symbol_red = $event.target.multiple ? $$selectedVal : $$selectedVal[0]
-      }
-    }
-  }, [_c('option', {
-    attrs: {
-      "value": ""
-    }
-  }, [_vm._v("-")]), _vm._v(" "), _c('option', {
-    attrs: {
-      "value": "=="
-    }
-  }, [_vm._v("Equal")]), _vm._v(" "), _c('option', {
-    attrs: {
-      "value": "!="
-    }
-  }, [_vm._v("Not Equal")]), _vm._v(" "), _c('option', {
-    attrs: {
-      "value": "<"
-    }
-  }, [_vm._v("Less")]), _vm._v(" "), _c('option', {
-    attrs: {
-      "value": ">"
-    }
-  }, [_vm._v("Greater")]), _vm._v(" "), _c('option', {
-    attrs: {
-      "value": "<="
-    }
-  }, [_vm._v("Less Than or Equal")]), _vm._v(" "), _c('option', {
-    attrs: {
-      "value": ">="
-    }
-  }, [_vm._v("Greater Than or Equal")])])]), _vm._v(" "), _c('div', {
-    staticClass: "form-group col-sm-4 col-xs-12",
-    class: {
-      'has-error': _vm.errors.has('threshold_red')
-    }
-  }, [_c('label', {
-    staticClass: "control-label"
-  }, [_vm._v("Main Th.")]), _vm._v(" "), _c('input', {
-    directives: [{
-      name: "model",
-      rawName: "v-model",
-      value: (_vm.kpi.threshold_red),
-      expression: "kpi.threshold_red"
-    }],
-    staticClass: "form-control input-sm",
-    attrs: {
-      "name": "threshold_red",
-      "type": "number",
-      "placeholder": "Number",
-      "autocomplete": "off",
-      "disabled": _vm.kpi.symbol_red == ''
-    },
-    domProps: {
-      "value": (_vm.kpi.threshold_red)
-    },
-    on: {
-      "input": function($event) {
-        if ($event.target.composing) { return; }
-        _vm.kpi.threshold_red = $event.target.value
-      },
-      "blur": function($event) {
-        _vm.$forceUpdate()
-      }
-    }
-  })]), _vm._v(" "), _c('div', {
-    staticClass: "form-group col-sm-4 col-xs-12",
-    class: {
-      'has-error': _vm.errors.has('threshold_aggregate_red')
-    }
-  }, [_c('label', {
-    staticClass: "control-label"
-  }, [_vm._v("Main Aggregate Th.")]), _vm._v(" "), _c('input', {
-    directives: [{
-      name: "model",
-      rawName: "v-model",
-      value: (_vm.kpi.threshold_aggregate_red),
-      expression: "kpi.threshold_aggregate_red"
-    }],
-    staticClass: "form-control input-sm",
-    attrs: {
-      "name": "threshold_aggregate_red",
-      "type": "number",
-      "placeholder": "Number",
-      "autocomplete": "off",
-      "disabled": _vm.kpi.symbol_red == ''
-    },
-    domProps: {
-      "value": (_vm.kpi.threshold_aggregate_red)
-    },
-    on: {
-      "input": function($event) {
-        if ($event.target.composing) { return; }
-        _vm.kpi.threshold_aggregate_red = $event.target.value
-      },
-      "blur": function($event) {
-        _vm.$forceUpdate()
-      }
-    }
-  })])]), _vm._v(" "), _c('div', {
-    staticClass: "row"
-  }, [_c('div', {
-    staticClass: "form-group col-sm-4 col-xs-12"
-  }, [_c('label', [_vm._v("Second Symbol")]), _vm._v(" "), _c('select', {
-    directives: [{
-      name: "model",
-      rawName: "v-model",
-      value: (_vm.kpi.symbol_yellow),
-      expression: "kpi.symbol_yellow"
-    }],
-    staticClass: "form-control input-sm",
-    on: {
-      "change": function($event) {
-        var $$selectedVal = Array.prototype.filter.call($event.target.options, function(o) {
-          return o.selected
-        }).map(function(o) {
-          var val = "_value" in o ? o._value : o.value;
-          return val
-        });
-        _vm.kpi.symbol_yellow = $event.target.multiple ? $$selectedVal : $$selectedVal[0]
-      }
-    }
-  }, [_c('option', {
-    attrs: {
-      "value": ""
-    }
-  }, [_vm._v("-")]), _vm._v(" "), _c('option', {
-    attrs: {
-      "value": "=="
-    }
-  }, [_vm._v("Equal")]), _vm._v(" "), _c('option', {
-    attrs: {
-      "value": "!="
-    }
-  }, [_vm._v("Not Equal")]), _vm._v(" "), _c('option', {
-    attrs: {
-      "value": "<"
-    }
-  }, [_vm._v("Less")]), _vm._v(" "), _c('option', {
-    attrs: {
-      "value": ">"
-    }
-  }, [_vm._v("Greater")]), _vm._v(" "), _c('option', {
-    attrs: {
-      "value": "<="
-    }
-  }, [_vm._v("Less Than or Equal")]), _vm._v(" "), _c('option', {
-    attrs: {
-      "value": ">="
-    }
-  }, [_vm._v("Greater Than or Equal")])])]), _vm._v(" "), _c('div', {
-    staticClass: "form-group col-sm-4 col-xs-12",
-    class: {
-      'has-error': _vm.errors.has('threshold_yellow')
-    }
-  }, [_c('label', {
-    staticClass: "control-label"
-  }, [_vm._v("Second Th.")]), _vm._v(" "), _c('input', {
-    directives: [{
-      name: "model",
-      rawName: "v-model",
-      value: (_vm.kpi.threshold_yellow),
-      expression: "kpi.threshold_yellow"
-    }],
-    staticClass: "form-control input-sm",
-    attrs: {
-      "name": "threshold_yellow",
-      "type": "number",
-      "placeholder": "Number",
-      "autocomplete": "off",
-      "disabled": _vm.kpi.symbol_yellow == ''
-    },
-    domProps: {
-      "value": (_vm.kpi.threshold_yellow)
-    },
-    on: {
-      "input": function($event) {
-        if ($event.target.composing) { return; }
-        _vm.kpi.threshold_yellow = $event.target.value
-      },
-      "blur": function($event) {
-        _vm.$forceUpdate()
-      }
-    }
-  })]), _vm._v(" "), _c('div', {
-    staticClass: "form-group col-sm-4 col-xs-12",
-    class: {
-      'has-error': _vm.errors.has('threshold_aggregate_yellow')
-    }
-  }, [_c('label', {
-    staticClass: "control-label"
-  }, [_vm._v("Second Aggregate Th.")]), _vm._v(" "), _c('input', {
-    directives: [{
-      name: "model",
-      rawName: "v-model",
-      value: (_vm.kpi.threshold_aggregate_yellow),
-      expression: "kpi.threshold_aggregate_yellow"
-    }],
-    staticClass: "form-control input-sm",
-    attrs: {
-      "name": "threshold_aggregate_yellow",
-      "type": "number",
-      "placeholder": "Number",
-      "autocomplete": "off",
-      "disabled": _vm.kpi.symbol_yellow == ''
-    },
-    domProps: {
-      "value": (_vm.kpi.threshold_aggregate_yellow)
-    },
-    on: {
-      "input": function($event) {
-        if ($event.target.composing) { return; }
-        _vm.kpi.threshold_aggregate_yellow = $event.target.value
-      },
-      "blur": function($event) {
-        _vm.$forceUpdate()
-      }
-    }
-  })])]), _vm._v(" "), _c('span', {
-    directives: [{
-      name: "show",
-      rawName: "v-show",
-      value: (_vm.kpi.type == 'std'),
-      expression: "kpi.type=='std'"
-    }]
-  }, [_c('div', {
-    staticClass: "row"
-  }, [_c('div', {
-    staticClass: "checkbox col-sm-4 col-xs-12"
-  }, [_c('label', [_c('input', {
-    directives: [{
-      name: "model",
-      rawName: "v-model",
-      value: (_vm.hasRelativeTh),
-      expression: "hasRelativeTh"
-    }],
-    attrs: {
-      "type": "checkbox"
-    },
-    domProps: {
-      "checked": Array.isArray(_vm.hasRelativeTh) ? _vm._i(_vm.hasRelativeTh, null) > -1 : (_vm.hasRelativeTh)
-    },
-    on: {
-      "click": function($event) {
-        _vm.updateMonitoring('relative')
-      },
-      "__c": function($event) {
-        var $$a = _vm.hasRelativeTh,
-          $$el = $event.target,
-          $$c = $$el.checked ? (true) : (false);
-        if (Array.isArray($$a)) {
-          var $$v = null,
-            $$i = _vm._i($$a, $$v);
-          if ($$c) {
-            $$i < 0 && (_vm.hasRelativeTh = $$a.concat($$v))
-          } else {
-            $$i > -1 && (_vm.hasRelativeTh = $$a.slice(0, $$i).concat($$a.slice($$i + 1)))
-          }
-        } else {
-          _vm.hasRelativeTh = $$c
-        }
-      }
-    }
-  }), _vm._v(" Relative KPI\n\t\t\t\t\t\t\t\t\t\t\t")])])]), _vm._v(" "), _c('div', {
-    directives: [{
-      name: "show",
-      rawName: "v-show",
-      value: (_vm.hasRelativeTh),
-      expression: "hasRelativeTh"
-    }],
-    staticClass: "custom-panel"
-  }, [_c('div', {
-    staticClass: "row"
-  }, [_c('div', {
-    staticClass: "form-group col-xs-12 col-sm-3",
-    class: {
-      'has-error': _vm.errors.has('threshold_aggregate_relative')
-    }
-  }, [_c('label', {
-    staticClass: "control-label"
-  }, [_vm._v("Aggregate Th.")]), _vm._v(" "), _c('input', {
-    directives: [{
-      name: "model",
-      rawName: "v-model",
-      value: (_vm.kpi.threshold_aggregate_relative),
-      expression: "kpi.threshold_aggregate_relative"
-    }],
-    staticClass: "form-control input-sm",
-    attrs: {
-      "name": "threshold_aggregate_relative",
-      "type": "number",
-      "placeholder": "Number",
-      "autocomplete": "off"
-    },
-    domProps: {
-      "value": (_vm.kpi.threshold_aggregate_relative)
-    },
-    on: {
-      "input": function($event) {
-        if ($event.target.composing) { return; }
-        _vm.kpi.threshold_aggregate_relative = $event.target.value
-      },
-      "blur": function($event) {
-        _vm.$forceUpdate()
-      }
-    }
-  })]), _vm._v(" "), _c('div', {
-    staticClass: "form-group col-xs-12 col-sm-3"
-  }, [_c('label', [_vm._v("N Rops")]), _vm._v(" "), _c('select', {
-    directives: [{
-      name: "model",
-      rawName: "v-model",
-      value: (_vm.kpi.threshold_aggregate_relative_n),
-      expression: "kpi.threshold_aggregate_relative_n"
-    }],
-    staticClass: "form-control input-sm",
-    attrs: {
-      "disabled": _vm.kpi.threshold_aggregate_relative == '' ? true : false
-    },
-    on: {
-      "change": function($event) {
-        var $$selectedVal = Array.prototype.filter.call($event.target.options, function(o) {
-          return o.selected
-        }).map(function(o) {
-          var val = "_value" in o ? o._value : o.value;
-          return val
-        });
-        _vm.kpi.threshold_aggregate_relative_n = $event.target.multiple ? $$selectedVal : $$selectedVal[0]
-      }
-    }
-  }, _vm._l((_vm.numbers), function(number) {
-    return _c('option', {
-      domProps: {
-        "value": number.value
-      }
-    }, [_vm._v(_vm._s(number.text))])
-  }))]), _vm._v(" "), _c('div', {
-    staticClass: "form-group col-xs-12 col-sm-3",
-    class: {
-      'has-error': _vm.errors.has('threshold_relative')
-    }
-  }, [_c('label', {
-    staticClass: "control-label"
-  }, [_vm._v("Threshold")]), _vm._v(" "), _c('input', {
-    directives: [{
-      name: "model",
-      rawName: "v-model",
-      value: (_vm.kpi.threshold_relative),
-      expression: "kpi.threshold_relative"
-    }],
-    staticClass: "form-control input-sm",
-    attrs: {
-      "name": "threshold_relative",
-      "type": "number",
-      "placeholder": "Number",
-      "autocomplete": "off"
-    },
-    domProps: {
-      "value": (_vm.kpi.threshold_relative)
-    },
-    on: {
-      "input": function($event) {
-        if ($event.target.composing) { return; }
-        _vm.kpi.threshold_relative = $event.target.value
-      },
-      "blur": function($event) {
-        _vm.$forceUpdate()
-      }
-    }
-  })]), _vm._v(" "), _c('div', {
-    staticClass: "form-group col-xs-12 col-sm-3"
-  }, [_c('label', [_vm._v("N Rops")]), _vm._v(" "), _c('select', {
-    directives: [{
-      name: "model",
-      rawName: "v-model",
-      value: (_vm.kpi.threshold_relative_n),
-      expression: "kpi.threshold_relative_n"
-    }],
-    staticClass: "form-control input-sm",
-    attrs: {
-      "disabled": _vm.kpi.threshold_relative == '' ? true : false
-    },
-    on: {
-      "change": function($event) {
-        var $$selectedVal = Array.prototype.filter.call($event.target.options, function(o) {
-          return o.selected
-        }).map(function(o) {
-          var val = "_value" in o ? o._value : o.value;
-          return val
-        });
-        _vm.kpi.threshold_relative_n = $event.target.multiple ? $$selectedVal : $$selectedVal[0]
-      }
-    }
-  }, _vm._l((_vm.numbers), function(number) {
-    return _c('option', {
-      domProps: {
-        "value": number.value
-      }
-    }, [_vm._v(_vm._s(number.text))])
+    staticClass: "table table-condensed"
+  }, [_c('thead', [_c('tr', _vm._l((_vm.headers), function(header) {
+    return _c('th', [_vm._v(_vm._s(header))])
+  }))]), _vm._v(" "), _c('tbody', _vm._l((_vm.rows), function(row) {
+    return _c('tr', _vm._l((_vm.headers), function(header) {
+      return _c('td', [_vm._v("\n\t\t\t\t\t\t" + _vm._s(row[header] != null ? row[header] : '-') + "\n\t\t\t\t\t")])
+    }))
   }))])]), _vm._v(" "), _c('div', {
-    staticClass: "row"
-  }, [_c('div', {
-    staticClass: "form-group col-xs-12 col-sm-3 col-sm-offset-6",
-    class: {
-      'has-error': _vm.errors.has('threshold_relative_condition')
-    }
-  }, [_c('label', {
-    staticClass: "control-label"
-  }, [_vm._v("Conditional Th.")]), _vm._v(" "), _c('input', {
-    directives: [{
-      name: "model",
-      rawName: "v-model",
-      value: (_vm.kpi.threshold_relative_condition),
-      expression: "kpi.threshold_relative_condition"
-    }],
-    staticClass: "form-control input-sm",
-    attrs: {
-      "name": "threshold_relative_condition",
-      "type": "number",
-      "placeholder": "Number",
-      "autocomplete": "off",
-      "disabled": _vm.kpi.threshold_relative == '' ? true : false
-    },
-    domProps: {
-      "value": (_vm.kpi.threshold_relative_condition)
-    },
-    on: {
-      "input": function($event) {
-        if ($event.target.composing) { return; }
-        _vm.kpi.threshold_relative_condition = $event.target.value
-      },
-      "blur": function($event) {
-        _vm.$forceUpdate()
-      }
-    }
-  })]), _vm._v(" "), _c('div', {
-    staticClass: "form-group col-xs-12 col-sm-3"
-  }, [_c('label', [_vm._v("Kpi Condition")]), _vm._v(" "), _c('select', {
-    directives: [{
-      name: "model",
-      rawName: "v-model",
-      value: (_vm.kpi.threshold_relative_condition_kpi),
-      expression: "kpi.threshold_relative_condition_kpi"
-    }],
-    staticClass: "form-control input-sm",
-    attrs: {
-      "disabled": _vm.kpi.threshold_relative_condition == '' ? true : false
-    },
-    on: {
-      "change": function($event) {
-        var $$selectedVal = Array.prototype.filter.call($event.target.options, function(o) {
-          return o.selected
-        }).map(function(o) {
-          var val = "_value" in o ? o._value : o.value;
-          return val
-        });
-        _vm.kpi.threshold_relative_condition_kpi = $event.target.multiple ? $$selectedVal : $$selectedVal[0]
-      }
-    }
-  }, _vm._l((_vm.kpiOptions), function(kpi) {
-    return _c('option', {
-      domProps: {
-        "value": kpi.id
-      }
-    }, [_vm._v(_vm._s(kpi.name))])
-  }))])])]), _vm._v(" "), _c('div', {
-    staticClass: "row"
-  }, [_c('div', {
-    staticClass: "checkbox col-sm-4 col-xs-12"
-  }, [_c('label', [_c('input', {
-    directives: [{
-      name: "model",
-      rawName: "v-model",
-      value: (_vm.hasAbsoluteTh),
-      expression: "hasAbsoluteTh"
-    }],
-    attrs: {
-      "type": "checkbox"
-    },
-    domProps: {
-      "checked": Array.isArray(_vm.hasAbsoluteTh) ? _vm._i(_vm.hasAbsoluteTh, null) > -1 : (_vm.hasAbsoluteTh)
-    },
-    on: {
-      "click": function($event) {
-        _vm.updateMonitoring('absolute')
-      },
-      "__c": function($event) {
-        var $$a = _vm.hasAbsoluteTh,
-          $$el = $event.target,
-          $$c = $$el.checked ? (true) : (false);
-        if (Array.isArray($$a)) {
-          var $$v = null,
-            $$i = _vm._i($$a, $$v);
-          if ($$c) {
-            $$i < 0 && (_vm.hasAbsoluteTh = $$a.concat($$v))
-          } else {
-            $$i > -1 && (_vm.hasAbsoluteTh = $$a.slice(0, $$i).concat($$a.slice($$i + 1)))
-          }
-        } else {
-          _vm.hasAbsoluteTh = $$c
-        }
-      }
-    }
-  }), _vm._v(" Absolute KPI\n\t\t\t\t\t\t\t\t\t\t\t")])])]), _vm._v(" "), _c('div', {
     directives: [{
       name: "show",
       rawName: "v-show",
-      value: (_vm.hasAbsoluteTh),
-      expression: "hasAbsoluteTh"
+      value: (_vm.rows.length == 0),
+      expression: "rows.length==0"
     }],
-    staticClass: "custom-panel"
-  }, [_c('div', {
-    staticClass: "row"
-  }, [_c('div', {
-    staticClass: "form-group col-xs-12 col-sm-3",
-    class: {
-      'has-error': _vm.errors.has('threshold_aggregate_absolute')
+    staticStyle: {
+      "text-align": "center",
+      "margin-top": "200px"
     }
-  }, [_c('label', {
-    staticClass: "control-label"
-  }, [_vm._v("Aggregate Th.")]), _vm._v(" "), _c('input', {
-    directives: [{
-      name: "model",
-      rawName: "v-model",
-      value: (_vm.kpi.threshold_aggregate_absolute),
-      expression: "kpi.threshold_aggregate_absolute"
-    }],
-    staticClass: "form-control input-sm",
-    attrs: {
-      "name": "threshold_aggregate_absolute",
-      "type": "number",
-      "placeholder": "Number",
-      "autocomplete": "off"
-    },
-    domProps: {
-      "value": (_vm.kpi.threshold_aggregate_absolute)
-    },
-    on: {
-      "input": function($event) {
-        if ($event.target.composing) { return; }
-        _vm.kpi.threshold_aggregate_absolute = $event.target.value
-      },
-      "blur": function($event) {
-        _vm.$forceUpdate()
-      }
-    }
-  })]), _vm._v(" "), _c('div', {
-    staticClass: "form-group col-xs-12 col-sm-3"
-  }, [_c('label', [_vm._v("N Rops")]), _vm._v(" "), _c('select', {
-    directives: [{
-      name: "model",
-      rawName: "v-model",
-      value: (_vm.kpi.threshold_aggregate_absolute_n),
-      expression: "kpi.threshold_aggregate_absolute_n"
-    }],
-    staticClass: "form-control input-sm",
-    attrs: {
-      "disabled": _vm.kpi.threshold_aggregate_absolute == '' ? true : false
-    },
-    on: {
-      "change": function($event) {
-        var $$selectedVal = Array.prototype.filter.call($event.target.options, function(o) {
-          return o.selected
-        }).map(function(o) {
-          var val = "_value" in o ? o._value : o.value;
-          return val
-        });
-        _vm.kpi.threshold_aggregate_absolute_n = $event.target.multiple ? $$selectedVal : $$selectedVal[0]
-      }
-    }
-  }, _vm._l((_vm.numbers), function(number) {
-    return _c('option', {
-      domProps: {
-        "value": number.value
-      }
-    }, [_vm._v(_vm._s(number.text))])
-  }))])])])])])]), _vm._v(" "), _c('div', {
-    staticClass: "tab-pane",
-    attrs: {
-      "id": "kpi-equation"
-    }
-  }, [_c('div', {
-    staticClass: "form-group",
-    class: {
-      'has-error': _vm.errors.has('equation')
-    }
-  }, [_c('label', {
-    staticClass: "control-label",
-    attrs: {
-      "for": "inEquation"
-    }
-  }, [_vm._v("Equation")]), _vm._v(" "), _c('textarea', {
-    directives: [{
-      name: "model",
-      rawName: "v-model",
-      value: (_vm.kpi.equation),
-      expression: "kpi.equation"
-    }],
-    staticClass: "form-control",
-    attrs: {
-      "id": "inEquation",
-      "name": "equation",
-      "autocomplete": "off",
-      "placeholder": "Equation",
-      "rows": "10"
-    },
-    domProps: {
-      "value": (_vm.kpi.equation)
-    },
-    on: {
-      "input": function($event) {
-        if ($event.target.composing) { return; }
-        _vm.kpi.equation = $event.target.value
-      }
-    }
-  })])])])]), _vm._v(" "), _c('div', {
-    staticClass: "modal-footer"
-  }, [_c('button', {
-    staticClass: "btn btn-block btn-success",
-    attrs: {
-      "type": "button"
-    },
-    on: {
-      "click": function($event) {
-        $event.preventDefault();
-        _vm.onSubmit($event)
-      }
-    }
-  }, [_vm._v("\n\t\t\t\t\t\t" + _vm._s(_vm.action == 'new' ? 'Add' : 'Edit') + "\n\t\t\t\t")])])])])])
-},staticRenderFns: [function (){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;
-  return _c('button', {
-    staticClass: "close",
-    attrs: {
-      "type": "button",
-      "data-dismiss": "modal",
-      "aria-label": "Close"
-    }
-  }, [_c('span', {
-    attrs: {
-      "aria-hidden": "true"
-    }
-  }, [_vm._v("×")])])
-},function (){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;
-  return _c('ul', {
-    staticClass: "nav nav-tabs",
-    attrs: {
-      "id": "kpi-form-tabs"
-    }
-  }, [_c('li', {
-    staticClass: "active"
-  }, [_c('a', {
-    attrs: {
-      "data-toggle": "tab",
-      "href": "#kpi-threshold"
-    }
-  }, [_vm._v("Threshold")])]), _vm._v(" "), _c('li', [_c('a', {
-    attrs: {
-      "data-toggle": "tab",
-      "href": "#kpi-equation"
-    }
-  }, [_vm._v("Equation")])])])
-}]}
+  }, [_vm._v("\n\t\tNo data available.\n\t")])])
+},staticRenderFns: []}
 module.exports.render._withStripped = true
 if (false) {
   module.hot.accept()
   if (module.hot.data) {
-     require("vue-hot-reload-api").rerender("data-v-f8355528", module.exports)
+     require("vue-hot-reload-api").rerender("data-v-21583560", module.exports)
   }
 }
 
 /***/ }),
 
-/***/ 186:
+/***/ 187:
 /***/ (function(module, exports, __webpack_require__) {
 
 // style-loader: Adds some css to the DOM by adding a <style> tag
 
 // load the styles
-var content = __webpack_require__(168);
+var content = __webpack_require__(169);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
-var update = __webpack_require__(5)("20e6cedd", content, false);
+var update = __webpack_require__(5)("d7cd3d6c", content, false);
 // Hot Module Replacement
 if(false) {
  // When the styles change, update the <style> tags
  if(!content.locals) {
-   module.hot.accept("!!../../../../../node_modules/css-loader/index.js!../../../../../node_modules/vue-loader/lib/style-rewriter.js?id=data-v-1900c156!../../../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./KpiTable.vue", function() {
-     var newContent = require("!!../../../../../node_modules/css-loader/index.js!../../../../../node_modules/vue-loader/lib/style-rewriter.js?id=data-v-1900c156!../../../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./KpiTable.vue");
+   module.hot.accept("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/vue-loader/lib/style-rewriter.js?id=data-v-21583560!../../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./AlarmTable.vue", function() {
+     var newContent = require("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/vue-loader/lib/style-rewriter.js?id=data-v-21583560!../../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./AlarmTable.vue");
      if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
      update(newContent);
    });
@@ -2414,64 +365,10 @@ if(false) {
 
 /***/ }),
 
-/***/ 188:
+/***/ 192:
 /***/ (function(module, exports, __webpack_require__) {
 
-// style-loader: Adds some css to the DOM by adding a <style> tag
-
-// load the styles
-var content = __webpack_require__(170);
-if(typeof content === 'string') content = [[module.i, content, '']];
-if(content.locals) module.exports = content.locals;
-// add the styles to the DOM
-var update = __webpack_require__(5)("0b9f2c44", content, false);
-// Hot Module Replacement
-if(false) {
- // When the styles change, update the <style> tags
- if(!content.locals) {
-   module.hot.accept("!!../../../../../node_modules/css-loader/index.js!../../../../../node_modules/vue-loader/lib/style-rewriter.js?id=data-v-7b3bc340!../../../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./KpiModalDelete.vue", function() {
-     var newContent = require("!!../../../../../node_modules/css-loader/index.js!../../../../../node_modules/vue-loader/lib/style-rewriter.js?id=data-v-7b3bc340!../../../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./KpiModalDelete.vue");
-     if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
-     update(newContent);
-   });
- }
- // When the module is disposed, remove the <style> tags
- module.hot.dispose(function() { update(); });
-}
-
-/***/ }),
-
-/***/ 189:
-/***/ (function(module, exports, __webpack_require__) {
-
-// style-loader: Adds some css to the DOM by adding a <style> tag
-
-// load the styles
-var content = __webpack_require__(171);
-if(typeof content === 'string') content = [[module.i, content, '']];
-if(content.locals) module.exports = content.locals;
-// add the styles to the DOM
-var update = __webpack_require__(5)("728d8a30", content, false);
-// Hot Module Replacement
-if(false) {
- // When the styles change, update the <style> tags
- if(!content.locals) {
-   module.hot.accept("!!../../../../../node_modules/css-loader/index.js!../../../../../node_modules/vue-loader/lib/style-rewriter.js?id=data-v-f8355528!../../../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./KpiForm.vue", function() {
-     var newContent = require("!!../../../../../node_modules/css-loader/index.js!../../../../../node_modules/vue-loader/lib/style-rewriter.js?id=data-v-f8355528!../../../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./KpiForm.vue");
-     if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
-     update(newContent);
-   });
- }
- // When the module is disposed, remove the <style> tags
- module.hot.dispose(function() { update(); });
-}
-
-/***/ }),
-
-/***/ 193:
-/***/ (function(module, exports, __webpack_require__) {
-
-module.exports = __webpack_require__(139);
+module.exports = __webpack_require__(138);
 
 
 /***/ }),
@@ -5760,4 +3657,4 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*
 
 /***/ })
 
-},[193]);
+},[192]);

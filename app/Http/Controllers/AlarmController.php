@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 
-class MainController extends Controller
+class AlarmController extends Controller
 {
 	/**
 	 * Create a new controller instance.
@@ -17,12 +17,12 @@ class MainController extends Controller
 	}
 
 	/**
-	 * Show the filter kpis view.
+	 * Show the alarms view.
 	 *
 	 * @return \Illuminate\Http\Response
 	 */
 	public function index()
 	{
-		return view('main.index');
+		return view('alarms.index');
 	}
 }

@@ -12,6 +12,7 @@ const { mix } = require('laravel-mix');
  */
 
 mix.js('resources/assets/js/views/main.js', 'public/js')
+   .js('resources/assets/js/views/alarms.js', 'public/js')
    .js('resources/assets/js/views/configuration.js', 'public/js')
    .sass('resources/assets/sass/app.scss', 'public/css')
    .extract([

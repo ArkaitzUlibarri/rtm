@@ -37,8 +37,6 @@ class CreateAlarmsTable extends Migration
 			$table->foreign('kpi_id')
 				  ->references('id')->on('kpis')
 				  ->onDelete('cascade');
-
-
 		});
 
 		/**

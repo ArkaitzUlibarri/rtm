@@ -126,12 +126,18 @@ const app = new Vue({
 
 			axios.get(url)
 				.then(function (response) {
+					if(response.data.data.length == 0) {
+						toastr.info("There are no items to show with current filter.");
+						return;
+					}
+
 					vm.data = response.data.data;
 					vm.headers = vm.setHeaders(vm.data[0]);
 					vm.equations = response.data.kpis;
 					vm.updateChartOptions();
 				})
 				.catch(function (error) {
+					console.log(error);
 					if(Array.isArray(error.response.data)) {
 						error.response.data.forEach( (error) => {
 							toastr.error(error);
@@ -357,6 +363,10 @@ const app = new Vue({
 
 })
 
+
+/**
+ * Inicializo la fecha y hora del filtro.
+ */
 $('#dtpToDate').datetimepicker({
 	format: "YYYY-MM-DD HH:mm",
 	maxDate: 'now'

@@ -3,5 +3,6 @@
   "/js/configuration.js": "/js/configuration.js",
   "/js/main.js": "/js/main.js",
   "/css/app.css": "/css/app.css",
+  "/js/alarms.js": "/js/alarms.js",
   "/js/manifest.js": "/js/manifest.js"
 }

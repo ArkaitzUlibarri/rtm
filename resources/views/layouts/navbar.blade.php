@@ -30,7 +30,7 @@
 					<li><a href="{{ route('register') }}">Register</a></li>
 				@else
 					<li><a href="{{ url('home') }}">Kpis</a></li>
-					<li><a href="{{ url('home') }}">Alarms</a></li>
+					<li><a href="{{ url('alarms') }}">Alarms</a></li>
                     <li><a href="{{ url('configuration') }}">Configuration</a></li>
 
 					<li class="dropdown">

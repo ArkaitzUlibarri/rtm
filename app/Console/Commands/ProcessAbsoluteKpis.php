@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\RTM\Alarm\AlarmRepository;
 use App\RTM\Filter\FilterRepository;
 use App\RTM\Kpi\KpiRepository;
 use Carbon\Carbon;
@@ -17,8 +18,19 @@ class ProcessAbsoluteKpis extends Command
 	 */
 	private $kpiRepository;
 
+	/**
+	 * Instancia del repositorio para realizar filtros de kpis.
+	 *
+	 * @var KpiRepository
+	 */
 	private $filterRepository;
 
+	/**
+	 * Instancia del repositorio de alarmas.
+	 *
+	 * @var KpiRepository
+	 */
+	private $alarmRepository;
 
 	/**
 	 * Controladores agrupados por vendor y tecnologia. 
@@ -69,12 +81,14 @@ class ProcessAbsoluteKpis extends Command
 	 */
 	public function __construct(
 		KpiRepository $kpiRepository,
-		FilterRepository $filterRepository)
+		FilterRepository $filterRepository,
+		AlarmRepository $alarmRepository)
 	{
 		parent::__construct();
 
 		$this->kpiRepository = $kpiRepository;
 		$this->filterRepository = $filterRepository;
+		$this->alarmRepository = $alarmRepository;
 	}
 
 	/**
@@ -143,7 +157,12 @@ class ProcessAbsoluteKpis extends Command
 				}
 			} 
 		}
-		
+
+		// Guardo las alarmas en la base de datos
+		foreach ($alarms as $alarm) {
+			$this->alarmRepository->insert($alarm);
+		}
+
 		dd($alarms);
 	}
 
@@ -174,6 +193,7 @@ class ProcessAbsoluteKpis extends Command
 					else {
 						$array[$entry->item][$kpi->id] = [
 							'type'               => 'absolute',
+							'created_at'         => $this->argument('datetime'),
 							'vendor'             => $kpi->vendor,
 							'tech'               => $kpi->tech,
 							'controller_id'      => $entry->item,

@@ -17,8 +17,14 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();
 });
 
+
 /**
- * Peticiones de filtrado de kpi.
+ * Peticion de filtrado de alarmas.
+ */
+Route::get('alarms', 'Api\AlarmController@index');
+
+/**
+ * Peticion de filtrado de kpi.
  */
 Route::get('filter-kpis', 'Api\FilterController@index');
 
