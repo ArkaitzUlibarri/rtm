@@ -19,9 +19,8 @@ Auth::routes();
 
 Route::get('/home', 'MainController@index');
 
-Route::resource('alarms', 'AlarmController', ['only' => [
-	'index'
-]]);
+Route::get('/alarms', 'AlarmController@index');
+Route::get('/alarms/download', 'AlarmController@download');
 
 Route::resource('configuration', 'ConfigurationController', ['only' => [
 	'index'

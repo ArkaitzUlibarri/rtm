@@ -34,7 +34,13 @@
 	<small class="text-danger">Archive Type: Cells, BSC (2G), RNC (3G), 4G Province (4G)</small>
 </p>
 
+<hr>
+
 <button class="btn btn-primary btn-block"
 		v-on:click="fetchData"
 		type="button">Filter
 </button>
+
+<a href="{{ url('alarms/download') }}" class="btn btn-success btn-block" role="button">
+	<span class="glyphicon glyphicon-download-alt"></span> Download
+</a>
