@@ -95,7 +95,7 @@ class AlarmRepository
 					'controllers.name as controller',
 					'kpis.name as kpi',
 					'alarms.value',
-					'alarms.relative_threshold as relative_th',
+					'alarms.relative_threshold as relative_difference',
 					'alarms.threshold',
 					'alarms.samples'
 				)
