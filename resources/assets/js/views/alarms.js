@@ -19,7 +19,9 @@ const app = new Vue({
 		filter: {
 			type: 'node',	// Tipo de alarma, nodo/historico (celda/controlador)			
 			for: 'last6h',	// Periodo
-			values:'NODE1'	// Elementos a filtar (celda/nodo/controlador)
+			tech: '2g',
+			vendor: 'eri',
+			values:''	// Elementos a filtar (celda/nodo/controlador)
 		},
 
 		// Campos disponibles para visualizar en la tabla
@@ -78,10 +80,17 @@ const app = new Vue({
 			var params = [
 				'type=' + this.filter.type,
 				'end_date=' + document.getElementById('dtpToDate').children[0].value,
-				'for=' + this.filter.for,
-				'values=' + this.getInputArray(this.filter.values)
+				'for=' + this.filter.for
 			].join('&');
-			
+
+			if(this.filter.values == '') {
+				params += '&vendor=' + this.filter.vendor;
+				params += '&tech=' + this.filter.tech;
+			}
+			else {
+				params += '&values=' + this.getInputArray(this.filter.values);
+			}
+
 			return params
 		},
 

@@ -28,7 +28,15 @@ class AlarmApiRequest extends ApiRequest
                 'in:node,archive'
             ],
             'values' => [
-                'required_if:type,node'
+                'required_without_all:tech,vendor'
+            ],
+            'tech' => [
+                'required_without:values',
+                Rule::in(config('filter.technologies'))
+            ],
+            'vendor' => [
+                'required_without:values',
+                Rule::in(config('filter.vendor'))
             ],
         ];
     }
@@ -48,7 +56,7 @@ class AlarmApiRequest extends ApiRequest
             $this['values'] = [];
         }
 
-        $this['end_date'] = Carbon::createFromFormat('Y-m-d H:i', $this['end_date']);
+        $this['end_date'] = Carbon::createFromFormat('Y-m-d H:i', $this['end_date'], 'Europe/Madrid');
 
         $this['start_date'] = $this['end_date']->copy()->subHours(
             config('filter.for')[$this['for']]['hours']

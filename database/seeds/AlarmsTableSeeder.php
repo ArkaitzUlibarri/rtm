@@ -105,12 +105,6 @@ class AlarmsTableSeeder extends Seeder
 			return array_pluck($array, 'id');
     	}
 
-/*
-		return DB::table('kpis')
-			->where('threshold_aggregate_absolute', '!=', null)
-			->select('id', 'vendor', 'tech', 'threshold_relative', 'threshold_relative_n')
-			->get();
-*/
 		return [];
     }
 

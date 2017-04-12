@@ -6,6 +6,8 @@ use Illuminate\Support\Facades\DB;
 
 class NodeAlarmsTableSeeder extends Seeder
 {
+	use SeederHelpers;
+
 	/**
 	 * Run the database seeds.
 	 *
@@ -16,7 +18,8 @@ class NodeAlarmsTableSeeder extends Seeder
 		$faker = Faker::create();
 
 		$sever = ['min', 'maj', 'crit'];
-		$specificProblem = [
+		$type = ['ettext', 'hw', 'sw'];
+		$names = [
 			'Emergency Unlock of Software Licensi',
 			'External Link Failure',
 			'GracePeriodStarted',
@@ -24,7 +27,9 @@ class NodeAlarmsTableSeeder extends Seeder
 			'Resource Allocation Failure Service'
 		];
 
-		$nodes = DB::table('nodes')->select('id')->get();
+
+		$first = DB::table('controllers')->select('name');
+		$nodes = DB::table('nodes')->select('name')->union($first)->get();
 
 		foreach ($nodes as $node)
 		{
@@ -32,12 +37,19 @@ class NodeAlarmsTableSeeder extends Seeder
 
 			for ($i=0; $i < $numberAlarms; $i++) 
 			{
+				$createdAt = $faker->dateTimeBetween('-1 month', 'now');
+
 				DB::table('node_alarms')->insert([
-					'node_id'          => $node->id,
-					'created_at'       => $faker->dateTimeBetween('-1 month', 'now'),
-					'sever'            => $faker->randomElement($sever),
-					'specific_problem' => $faker->randomElement($specificProblem),
-					'mo'               => $faker->sentence($nbWords = 6, $variableNbWords = true)
+					'node'        => $node->name,
+					'vendor'      => $faker->randomElement(SeederConfig::VENDORS),
+					'tech'        => $faker->randomElement(SeederConfig::TECHNOLOGIES),
+					'created_at'  => $createdAt,
+					'alarm_date'  => $createdAt,
+					'severity'    => $faker->randomElement($sever),
+					'type'        => $faker->randomElement($type),
+					'name'        => $faker->randomElement($names),
+					'information' => $faker->sentence(3, true),
+					'cause'       => $faker->sentence(2, true)
 				]);
 			}
 		}

@@ -63,15 +63,35 @@ class AlarmRepository
 				$query = $query->whereIn('controllers.name', $data['values']);
 			}
 
+			if(isset($data['vendor'])) {
+				$query = $query->where('alarms.vendor', $data['vendor']);
+			}
+
+			if(isset($data['tech'])) {
+				$query = $query->where('alarms.tech', $data['tech']);
+			}
+
 			return $query->get()->toArray();
 		}
 
-		return $this->select('public.node_alarms')
-			->whereIn('nodes.name', $data['values'])
+
+		$query = $this->select('public.node_alarms')
 			->where('node_alarms.created_at', '>=', $data['start_date'])
-			->where('node_alarms.created_at', '<=', $data['end_date'])
-			->get()
-			->toArray();
+			->where('node_alarms.created_at', '<=', $data['end_date']);
+		
+		if(count($data['values']) > 0) {
+			$query = $query->where('node_alarms.node', 'LIKE', '%' . $data['values'][0] . '%');
+		}
+
+		if(isset($data['vendor'])) {
+			$query = $query->where('node_alarms.vendor', $data['vendor']);
+		}
+
+		if(isset($data['tech'])) {
+			$query = $query->where('node_alarms.tech', $data['tech']);
+		}
+
+		return $query->get()->toArray();
 	}
 
 	/**
@@ -104,16 +124,19 @@ class AlarmRepository
 		}
 
 		return DB::table('public.node_alarms')
-			->join('nodes', 'node_alarms.node_id', '=', 'nodes.id')
 			->select(
-				'nodes.name',
-				DB::raw("to_char(node_alarms.created_at, 'YYYY-mm-dd') as date"),
-				DB::raw("to_char(node_alarms.created_at, 'HH24:MI') as time"),
-				'node_alarms.sever',
-				'node_alarms.mo',
-				'node_alarms.specific_problem'
+				'node_alarms.node',
+				'node_alarms.vendor',
+				'node_alarms.tech',
+				DB::raw("to_char(node_alarms.created_at, 'YYYY-mm-dd HH24:MI') as created_at"),
+				DB::raw("to_char(node_alarms.alarm_date, 'YYYY-mm-dd HH24:MI') as alarm_date"),
+				'node_alarms.severity',
+				'node_alarms.type',
+				'node_alarms.name',
+				'node_alarms.information',
+				'node_alarms.cause'
 			)
 			->orderBy('node_alarms.created_at', 'desc')
-			->orderBy('nodes.name', 'asc');
+			->orderBy('node_alarms.name', 'asc');
 	}
 }

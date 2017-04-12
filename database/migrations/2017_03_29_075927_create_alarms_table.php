@@ -44,17 +44,16 @@ class CreateAlarmsTable extends Migration
 		 */
 		Schema::create('node_alarms', function (Blueprint $table) {
 			$table->increments('id');
-			// $table->enum('tech', ['2g', '3g', 'gG']);
-
-			$table->integer('node_id')->unsigned()->index();
-			$table->foreign('node_id')
-				  ->references('id')->on('nodes')
-				  ->onDelete('cascade');
-
+			$table->string('node');
+			$table->enum('vendor', ['eri', 'hua']);
+			$table->enum('tech', ['2g', '3g', '4g']);
 			$table->dateTime('created_at');
-			$table->string('sever');
-			$table->string('specific_problem');
-			$table->mediumtext('mo');
+			$table->dateTime('alarm_date');
+			$table->string('severity');
+			$table->string('type');
+			$table->string('name');
+			$table->string('information')->nullable();
+			$table->string('cause')->nullable();
 		});
 	}
 
