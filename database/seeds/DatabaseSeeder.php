@@ -18,18 +18,15 @@ class DatabaseSeeder extends Seeder
 		$this->call(FieldsTableSeeder::class);
 		$this->call(ProvincesTableSeeder::class);
 		$this->call(KpisTableSeeder::class);
-		
-		/*
 		$this->call(ControllersTableSeeder::class);
 		$this->call(NodesTableSeeder::class);
 		$this->call(CellsTableSeeder::class);
-		
 		$this->call(NodeAlarmsTableSeeder::class);
 		$this->call(AlarmsTableSeeder::class);
 		
 		$this->call(CountersTableSeeder::class);
 		$this->call(CounterControllersTableSeeder::class);
 		$this->call(CounterProvincesTableSeeder::class);
-		*/
+
 	}
 }
