@@ -2,16 +2,17 @@
 
     <div class="form-group">
         <select id="filter" class="form-control input-sm" v-model="filter.tech" v-show="filter.type != 'tech'">
-            <option value="2g">2G</option>
-            <option value="3g">3G</option>
-            <option value="4g">4G</option>
+            @foreach(config('filter.technologies') as $tech)
+                <option value="{{ $tech }}">{{ strtoupper($tech) }}</option>
+            @endforeach
         </select>
     </div>
 
     <div class="form-group">
         <select id="filter" class="form-control input-sm" v-model="filter.vendor" v-show="filter.type != 'vnd'">
-            <option value="eri">ERI</option>
-            <option value="hua">HUA</option>
+            @foreach(config('filter.vendor') as $vendor)
+                <option value="{{ $vendor }}">{{ strtoupper($vendor) }}</option>
+            @endforeach
         </select>
     </div>
 

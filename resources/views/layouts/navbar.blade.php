@@ -32,6 +32,7 @@
 					<li><a href="{{ url('home') }}">Kpis</a></li>
 					<li><a href="{{ url('alarms') }}">Alarms</a></li>
                     <li><a href="{{ url('configuration') }}">Configuration</a></li>
+                    <li><a href="{{ url('users') }}">Users</a></li>
 
 					<li class="dropdown">
 						<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">

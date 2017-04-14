@@ -6,7 +6,7 @@ use App\RTM\Alarm\AlarmRepository;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
 
-class AlarmController extends Controller
+class AlarmsController extends Controller
 {
 	protected $alarmRepository;
 

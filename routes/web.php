@@ -19,12 +19,13 @@ Auth::routes();
 
 Route::get('/home', 'MainController@index');
 
-Route::get('/alarms', 'AlarmController@index');
-Route::get('/alarms/download', 'AlarmController@download');
+Route::get('/alarms', 'AlarmsController@index');
+Route::get('/alarms/download', 'AlarmsController@download');
 
-Route::resource('configuration', 'ConfigurationController', ['only' => [
-	'index'
+Route::get('configuration', 'ConfigurationController@index');
+
+Route::resource('users', 'UsersController', ['only' => [
+	'index', 'edit', 'update'
 ]]);
 
-
-//Route::resource('configursation', 'ConfigurationController');
+// Route::resource('configuration2', 'ConfigurationController');
