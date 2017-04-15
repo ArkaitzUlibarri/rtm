@@ -7,6 +7,8 @@
 		<div class="panel-heading">Users</div>
 		<div class="panel-body">
 
+			@include('users.filter')
+
 			<div class="table-responsive">
 				<table class="table table-condensed table-hover">
 					<thead>

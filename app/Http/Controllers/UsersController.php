@@ -3,19 +3,24 @@
 namespace App\Http\Controllers;
 
 use App\User;
+use App\UserRepository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class UsersController extends Controller
 {
+	protected $userRepository;
+
 	/**
 	 * Create a new controller instance.
 	 *
 	 * @return void
 	 */
-	public function __construct()
+	public function __construct(UserRepository $userRepository)
 	{
 		$this->middleware('auth');
+
+		$this->userRepository = $userRepository;
 	}
 
 	/**
@@ -23,9 +28,9 @@ class UsersController extends Controller
 	 *
 	 * @return \Illuminate\Http\Response
 	 */
-	public function index()
+	public function index(Request $request)
 	{
-		$users = User::orderBy('name', 'asc')->paginate(10);
+		$users = $this->userRepository->search($request->all(), true);
 
 		return view('users.index', compact('users'));
 	}

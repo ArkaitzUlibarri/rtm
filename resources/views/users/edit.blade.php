@@ -47,7 +47,7 @@
 					<div class="col-md-6">
 						<select id="role" name="role" class="form-control" value="{{ $user->role }}" required>
 							@foreach (config('filter.roles') as $role)
-								<option value="{{ $role }}">{{ strtoupper($role) }}</option>
+								<option value="{{ $role }}">{{ ucfirst($role) }}</option>
 							@endforeach
 						</select>
 
