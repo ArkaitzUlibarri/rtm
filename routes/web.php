@@ -25,7 +25,7 @@ Route::get('/alarms/download', 'AlarmsController@download');
 Route::get('configuration', 'ConfigurationController@index');
 
 Route::resource('users', 'UsersController', ['only' => [
-	'index', 'edit', 'update'
+	'index', 'edit', 'update', 'create', 'store'
 ]]);
 
 // Route::resource('configuration2', 'ConfigurationController');

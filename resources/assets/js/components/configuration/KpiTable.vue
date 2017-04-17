@@ -16,7 +16,7 @@
 					<th><abbr title="Second Symbol">SS</abbr></th>
 					<th><abbr title="Second Threshold">ST</abbr></th>
 					<th><abbr title="Second Aggregate Threshold">SAT</abbr></th>
-					<th class="custom-kpi-table-action-field">Actions</th>
+					<th class="custom-table-action-th">Actions</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -45,21 +45,19 @@
 
 					<td>
 						<a href="#"
-						   class="btn btn-primary btn-sm custom-kpi-table-btn"
+						   class="btn btn-primary btn-sm custom-table-action-btn"
 						   role="button"
 						   v-on:click.prevent="editKpi(row)">
 						   <span class="glyphicon glyphicon-edit"></span> Edit
 						</a>
 
 						<a href="#"
-						   class="btn btn-danger btn-sm custom-kpi-table-btn"
+						   class="btn btn-danger btn-sm custom-table-action-btn"
 						   role="button"
 						   v-on:click.prevent="deleteKpi(row)">
 						   <span class="glyphicon glyphicon-trash"></span> Delete
 						</a> 
-
 					</td>
-
 				</tr>
 			</tbody>
 		</table>
@@ -133,12 +131,4 @@ export default {
 
 <style>
 
-.custom-kpi-table-action-field {
-	min-width: 200px;
-	width: 200px;
-}
-
-.custom-kpi-table-btn {
-	width: 85px;
-}
 </style>

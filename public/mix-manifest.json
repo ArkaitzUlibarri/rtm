@@ -4,5 +4,6 @@
   "/js/main.js": "/js/main.js",
   "/css/app.css": "/css/app.css",
   "/js/alarms.js": "/js/alarms.js",
+  "/js/users.js": "/js/users.js",
   "/js/manifest.js": "/js/manifest.js"
 }

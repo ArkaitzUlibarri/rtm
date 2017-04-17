@@ -17,7 +17,7 @@
 							<th>Name</th>
 							<th>Email</th>
 							<th>Role</th>
-							<th>Actions</th>
+							<th class="custom-table-action-th">Actions</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -29,15 +29,15 @@
 								<td>{{ $user->role }}</td>
 								<td>
 									<a href="{{ route('users.edit', $user) }}"
-										class="btn btn-primary btn-sm"
+										class="btn btn-primary btn-sm custom-table-action-btn"
 										role="button">
 										<span class="glyphicon glyphicon-edit"></span> Edit
 									</a>
 									<a href="#"
-										class="btn btn-danger btn-sm"
+										class="btn btn-danger btn-sm custom-table-action-btn"
 										role="button">
 										<span class="glyphicon glyphicon-trash"></span> Delete
-									</a> 
+									</a>
 								</td>
 							</tr>
 						@endforeach
@@ -47,8 +47,17 @@
 
 			{{ $users->links() }}
 
+			<a href="{{ route('users.create') }}" class="btn btn-success" role="button">New User</a>
+
 		</div>
 	</div>
 </div>
 
 @endsection
+
+
+@push('bottom')
+
+	<script src="{{ asset('js/users.js') }}"></script>
+
+@endpush

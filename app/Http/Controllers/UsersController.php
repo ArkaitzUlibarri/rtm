@@ -45,9 +45,9 @@ class UsersController extends Controller
 		$user = User::findOrFail($id);
 
 		$validator = Validator::make($request->all(), [
-			'name' => 'required|max:255',
+			'name'  => 'required|max:255',
 			'email' => 'required|email|max:255|unique:users,email,' . $id,
-			'role' => 'required',
+			'role'  => 'required',
 		]);
 
 		if ($validator->fails()) {
@@ -58,8 +58,36 @@ class UsersController extends Controller
 		$user->save();
 
 		return redirect('users')
-			->with('message', 'User is successfully Updated!')
-			->withInput();
+			->with('message', 'User is successfully Updated!');
 	}
 
+
+	public function create()
+	{
+		return view('users.create');
+	}
+
+	public function store(Request $request)
+	{
+		$validator = Validator::make($request->all(), [
+			'name'     => 'required|max:255',
+			'email'    => 'required|email|max:255|unique:users',
+			'password' => 'required|min:6|confirmed',
+			'role'     => 'required',
+		]);
+
+		if ($validator->fails()) {
+			return redirect()->back()->withErrors($validator)->withInput();
+		}
+
+		User::create([
+			'name'     => $request->get('name'),
+			'email'    => $request->get('email'),
+			'password' => bcrypt($request->get('password')),
+			'role'     => $request->get('role'),
+        ]);
+
+		return redirect('users')
+			->with('message', 'The user was successfully created!');			
+	}
 }

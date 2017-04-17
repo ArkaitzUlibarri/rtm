@@ -22,3 +22,15 @@
 .selected-tag button {
 	margin-left: .8em;
 }
+
+
+// Sitio los botones de acciones de las tablas a
+// la derecha y les asigno una anchura determinada.
+.custom-table-action-th {
+	min-width: 200px;
+	width: 200px;
+}
+
+.custom-table-action-btn {
+	width: 85px;
+}
